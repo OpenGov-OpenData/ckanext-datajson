@@ -121,20 +121,20 @@ def do_validation(doc, errors_array):
                               "A dataset appears with accessLevel set to \"non-public\".", dataset_name)
 
             # bureauCode # required
-            if check_required_field(item, "bureauCode", list, dataset_name, errs):
-                for bc in item["bureauCode"]:
-                    if not isinstance(bc, (str, unicode)):
-                        add_error(errs, 5, "Invalid Required Field Value", "Each bureauCode must be a string",
-                                  dataset_name)
-                    elif ":" not in bc:
-                        add_error(errs, 5, "Invalid Required Field Value",
-                                  "The bureau code \"%s\" is invalid. "
-                                  "Start with the agency code, then a colon, then the bureau code." % bc,
-                                  dataset_name)
-                    elif bc not in omb_burueau_codes:
-                        add_error(errs, 5, "Invalid Required Field Value",
-                                  "The bureau code \"%s\" was not found in our list "
-                                  "(https://project-open-data.cio.gov/data/omb_bureau_codes.csv)." % bc, dataset_name)
+            #if check_required_field(item, "bureauCode", list, dataset_name, errs):
+            #    for bc in item["bureauCode"]:
+            #        if not isinstance(bc, (str, unicode)):
+            #            add_error(errs, 5, "Invalid Required Field Value", "Each bureauCode must be a string",
+            #                      dataset_name)
+            #        elif ":" not in bc:
+            #            add_error(errs, 5, "Invalid Required Field Value",
+            #                      "The bureau code \"%s\" is invalid. "
+            #                      "Start with the agency code, then a colon, then the bureau code." % bc,
+            #                      dataset_name)
+            #        elif bc not in omb_burueau_codes:
+            #            add_error(errs, 5, "Invalid Required Field Value",
+            #                      "The bureau code \"%s\" was not found in our list "
+            #                      "(https://project-open-data.cio.gov/data/omb_bureau_codes.csv)." % bc, dataset_name)
 
             # contactPoint # required
             if check_required_field(item, "contactPoint", dict, dataset_name, errs):
@@ -186,14 +186,14 @@ def do_validation(doc, errors_array):
                               "The field \"modified\" is not in valid format: \"%s\"" % item['modified'], dataset_name)
 
             # programCode # required
-            if check_required_field(item, "programCode", list, dataset_name, errs):
-                for pc in item["programCode"]:
-                    if not isinstance(pc, (str, unicode)):
-                        add_error(errs, 5, "Invalid Required Field Value",
-                                  "Each programCode in the programCode array must be a string", dataset_name)
-                    elif not PROGRAM_CODE_REGEX.match(pc):
-                        add_error(errs, 50, "Invalid Field Value (Optional Fields)",
-                                  "One of programCodes is not in valid format (ex. 018:001): \"%s\"" % pc, dataset_name)
+            #if check_required_field(item, "programCode", list, dataset_name, errs):
+            #    for pc in item["programCode"]:
+            #        if not isinstance(pc, (str, unicode)):
+            #            add_error(errs, 5, "Invalid Required Field Value",
+            #                      "Each programCode in the programCode array must be a string", dataset_name)
+            #        elif not PROGRAM_CODE_REGEX.match(pc):
+            #            add_error(errs, 50, "Invalid Field Value (Optional Fields)",
+            #                      "One of programCodes is not in valid format (ex. 018:001): \"%s\"" % pc, dataset_name)
 
             # publisher # required
             if check_required_field(item, "publisher", dict, dataset_name, errs):
