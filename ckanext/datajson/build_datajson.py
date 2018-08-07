@@ -180,9 +180,9 @@ def make_datajson_entry(package):
         ]
 
         for pair in [
-            ('bureauCode', 'bureau_code'),  # required
+            #('bureauCode', 'bureau_code'),  # required
             ('language', 'language'),   # optional
-            ('programCode', 'program_code'),    # required
+            #('programCode', 'program_code'),    # required
             ('references', 'related_documents'),    # optional
             ('theme', 'category'),  # optional
         ]:
@@ -287,7 +287,8 @@ def generate_distribution(package):
         if 'url' in rkeys:
             res_url = strip_if_string(r.get('url'))
             if res_url:
-                if 'api' == r.get('resource_type') or 'accessurl' == r.get('resource_type'):
+                if r.get('resource_type') in ['listing', 'service', 'api'] or \
+                        r.get('url_type') not in ['upload', 'datastore']:
                     resource += [("accessURL", res_url)]
                 else:
                     if res_url.startswith('/datastore/dump/'):

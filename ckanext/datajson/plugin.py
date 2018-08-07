@@ -16,7 +16,8 @@ def get_validator():
     import os
     from jsonschema import Draft4Validator, FormatChecker
 
-    schema_path = os.path.join(os.path.dirname(__file__), 'schema', 'federal-v1.1', 'dataset.json')
+    #schema_path = os.path.join(os.path.dirname(__file__), 'schema', 'federal-v1.1', 'dataset.json')
+    schema_path = os.path.join(os.path.dirname(__file__), 'schema', 'nonfederal-v1.1', 'dataset.json')
     with open(schema_path, 'r') as file:
         schema = json.loads(file.read())
         return Draft4Validator(schema, format_checker=FormatChecker())
@@ -75,12 +76,12 @@ class DataJsonPlugin(p.SingletonPlugin):
 
         # TODO DWC update action
         # /data/{org}/data.json
-        m.connect('public_data_listing', '/organization/{org}/data.json',
+        m.connect('public_data_listing', '/organization/{id}/data.json',
                   controller='ckanext.datajson.plugin:DataJsonController', action='generate_pdl')
 
         # TODO DWC update action
         # /data/{org}/edi.json
-        m.connect('enterprise_data_inventory', '/organization/{org}/edi.json',
+        m.connect('enterprise_data_inventory', '/organization/{id}/edi.json',
                   controller='ckanext.datajson.plugin:DataJsonController', action='generate_edi')
 
         # /pod/validate
@@ -161,31 +162,23 @@ class DataJsonController(BaseController):
 
         return render('datajsonvalidator.html')
 
-    def generate_pdl(self):
-        # DWC this is a hack, as I couldn't get to the request parameters. For whatever reason, the multidict was always empty
-        match = re.match(r"/organization/([-a-z0-9]+)/data.json", request.path)
-        if match:
-            # set content type (charset required or pylons throws an error)
-            response.content_type = 'application/json; charset=UTF-8'
+    def generate_pdl(self, id):
+        # set content type (charset required or pylons throws an error)
+        response.content_type = 'application/json; charset=UTF-8'
 
-            # allow caching of response (e.g. by Apache)
-            del response.headers["Cache-Control"]
-            del response.headers["Pragma"]
-            return make_pdl(match.group(1))
-        return "Invalid organization id"
+        # allow caching of response (e.g. by Apache)
+        del response.headers["Cache-Control"]
+        del response.headers["Pragma"]
+        return make_pdl(id)
 
-    def generate_edi(self):
-        # DWC this is a hack, as I couldn't get to the request parameters. For whatever reason, the multidict was always empty
-        match = re.match(r"/organization/([-a-z0-9]+)/edi.json", request.path)
-        if match:
-            # set content type (charset required or pylons throws an error)
-            response.content_type = 'application/json; charset=UTF-8'
+    def generate_edi(self, id):
+        # set content type (charset required or pylons throws an error)
+        response.content_type = 'application/json; charset=UTF-8'
 
-            # allow caching of response (e.g. by Apache)
-            del response.headers["Cache-Control"]
-            del response.headers["Pragma"]
-            return make_edi(match.group(1))
-        return "Invalid organization id"
+        # allow caching of response (e.g. by Apache)
+        del response.headers["Cache-Control"]
+        del response.headers["Pragma"]
+        return make_edi(id)
 
 
 def make_json():
@@ -217,7 +210,7 @@ def make_json():
     return output
 
 
-def make_edi(owner_org):
+def make_edi(org_id):
     # Error handler for creating error log
     stream = StringIO.StringIO()
     eh = logging.StreamHandler(stream)
@@ -227,10 +220,10 @@ def make_edi(owner_org):
     logger.addHandler(eh)
 
     # Build the data.json file.
-    packages = get_all_group_packages(group_id=owner_org)
+    packages = get_all_group_packages(group_id=org_id)
     output = []
     for pkg in packages:
-        if pkg['owner_org'] == owner_org:
+        if pkg['owner_org'] == org_id or pkg.get('organization',{}).get('name') == org_id:
             datajson_entry = make_datajson_entry(pkg)
             if datajson_entry and is_valid(datajson_entry):
                 output.append(datajson_entry)
@@ -248,7 +241,7 @@ def make_edi(owner_org):
     return write_zip(output, error, zip_name='edi')
 
 
-def make_pdl(owner_org):
+def make_pdl(org_id):
     # Error handler for creating error log
     stream = StringIO.StringIO()
     eh = logging.StreamHandler(stream)
@@ -259,13 +252,13 @@ def make_pdl(owner_org):
 
 
     # Build the data.json file.
-    packages = get_all_group_packages(group_id=owner_org)
+    packages = get_all_group_packages(group_id=org_id)
 
     output = []
     #Create data.json only using public datasets, datasets marked non-public are not exposed
     for pkg in packages:
         try:
-            if pkg['owner_org'] == owner_org and not pkg['private']:
+            if (pkg['owner_org'] == org_id or pkg.get('organization',{}).get('name') == org_id) and not pkg['private']:
                 datajson_entry = make_datajson_entry(pkg)
                 if datajson_entry and is_valid(datajson_entry):
                     output.append(datajson_entry)
@@ -273,7 +266,7 @@ def make_pdl(owner_org):
                     logger.warn("Dataset id=[%s], title=[%s] omitted\n", pkg.get('id', None), pkg.get('title', None))
 
         except KeyError:
-            logger.warn("Dataset id=[%s], title=['%s'] missing required 'public_access_level' field",
+            logger.warn("Dataset id=[%s], title=['%s'] missing required field",
                         pkg.get('id', None), pkg.get('title', None))
             pass
 
@@ -284,8 +277,7 @@ def make_pdl(owner_org):
     logger.removeHandler(eh)
     stream.close()
 
-    #return json.dumps(output)
-    return write_zip(output, error, zip_name='pdl')
+    return json.dumps(output)
 
 
 def get_all_group_packages(group_id):
@@ -339,4 +331,3 @@ def write_zip(data, error=None, zip_name='data'):
     response.content_disposition = 'attachment; filename="%s.zip"' % zip_name
 
     return binary
-
