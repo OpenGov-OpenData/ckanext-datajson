@@ -9,6 +9,11 @@ import logging
 from jsonschema.exceptions import best_match
 import StringIO
 
+try:
+    from collections import OrderedDict  # 2.7
+except ImportError:
+    from sqlalchemy.util import OrderedDict
+
 logger = logging.getLogger('datajson')
 
 
@@ -254,14 +259,14 @@ def make_pdl(org_id):
     # Build the data.json file.
     packages = get_all_group_packages(group_id=org_id)
 
-    output = []
+    datasets = []
     #Create data.json only using public datasets, datasets marked non-public are not exposed
     for pkg in packages:
         try:
             if (pkg['owner_org'] == org_id or pkg.get('organization',{}).get('name') == org_id) and not pkg['private']:
                 datajson_entry = make_datajson_entry(pkg)
                 if datajson_entry and is_valid(datajson_entry):
-                    output.append(datajson_entry)
+                    datasets.append(datajson_entry)
                 else:
                     logger.warn("Dataset id=[%s], title=[%s] omitted\n", pkg.get('id', None), pkg.get('title', None))
 
@@ -269,6 +274,14 @@ def make_pdl(org_id):
             logger.warn("Dataset id=[%s], title=['%s'] missing required field",
                         pkg.get('id', None), pkg.get('title', None))
             pass
+
+    output = OrderedDict([
+        ('conformsTo', 'https://project-open-data.cio.gov/v1.1/schema'),
+        ('describedBy', 'https://project-open-data.cio.gov/v1.1/schema/catalog.json'),
+        ('@context', 'https://project-open-data.cio.gov/v1.1/schema/catalog.jsonld'),
+        ('@type', 'dcat:Catalog'),
+        ('dataset', datasets),
+    ])
 
     # Get the error log
     eh.flush()
