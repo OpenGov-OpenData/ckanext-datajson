@@ -297,12 +297,12 @@ def generate_distribution(package):
                         if site_url:
                             res_url = site_url + res_url
                     resource += [("downloadURL", res_url)]
-                    if 'format' in rkeys:
-                        res_format = strip_if_string(r.get('format'))
-                        if res_format:
-                            resource += [("mediaType", res_format)]
-                    else:
-                        log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
+                if 'format' in rkeys:
+                    res_format = strip_if_string(r.get('format'))
+                    if res_format:
+                        resource += [("mediaType", res_format)]
+                else:
+                    log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
         else:
             log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
