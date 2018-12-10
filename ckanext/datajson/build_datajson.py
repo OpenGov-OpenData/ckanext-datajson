@@ -47,12 +47,13 @@ def make_datajson_entry(package):
         extras['category'] = extras['category'].replace(geospatial_group,'geospatial')
 
     # if there is no contact_email, set a default email
-    if not extras.get('contact_name') and not extras.get('contact_email'):
+    if not extras.get('contact_name'):
         contact_name = config.get('ckanext.datajson.contact_name', config.get('email_to'))
+        extras['contact_name'] = package.get('contact_name') or contact_name
+
+    if not extras.get('contact_email'):
         contact_email = config.get('ckanext.datajson.contact_email', config.get('ckan.site_title'))
-        if contact_name and contact_email:
-            extras['contact_name'] = contact_name
-            extras['contact_email'] = contact_email
+        extras['contact_email'] = package.get('contact_email') or contact_email
 
     parent_dataset_id = extras.get('parent_dataset')
     if parent_dataset_id:
@@ -296,12 +297,12 @@ def generate_distribution(package):
                         if site_url:
                             res_url = site_url + res_url
                     resource += [("downloadURL", res_url)]
-                    if 'format' in rkeys:
-                        res_format = strip_if_string(r.get('format'))
-                        if res_format:
-                            resource += [("mediaType", res_format)]
-                    else:
-                        log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
+                if 'format' in rkeys:
+                    res_format = strip_if_string(r.get('format'))
+                    if res_format:
+                        resource += [("mediaType", res_format)]
+                else:
+                    log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
         else:
             log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
