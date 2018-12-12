@@ -263,7 +263,8 @@ def make_pdl(org_id):
     #Create data.json only using public datasets, datasets marked non-public are not exposed
     for pkg in packages:
         try:
-            if (pkg['owner_org'] == org_id or pkg.get('organization',{}).get('name') == org_id) and not pkg['private']:
+            if ((pkg['owner_org'] == org_id or pkg.get('organization',{}).get('name') == org_id) and
+            pkg['type'] == 'dataset' and not pkg['private']):
                 datajson_entry = make_datajson_entry(pkg)
                 if datajson_entry and is_valid(datajson_entry):
                     datasets.append(datajson_entry)
