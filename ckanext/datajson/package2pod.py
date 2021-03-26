@@ -523,3 +523,15 @@ class Wrappers:
         msg = value + ' ... BECOMES ... ' + mime_type
         log.debug(msg)
         return mime_type
+
+    @staticmethod
+    def get_catalog_date(date_value):
+        dcat_issued = get_extra(Wrappers.pkg, 'dcat_issued')
+        dcat_modified = get_extra(Wrappers.pkg, 'dcat_modified')
+        if dcat_issued and dcat_modified:
+            catalog_date_field = Wrappers.current_field_map.get('field')
+            if catalog_date_field == 'metadata_created':
+                return dcat_issued
+            elif catalog_date_field == 'metadata_modified':
+                return dcat_modified
+        return date_value

@@ -13,8 +13,13 @@
     "description": {
       "field": "notes"
     },
+    "issued": {
+      "field": "metadata_created",
+      "wrapper": "get_catalog_date"
+    },
     "modified": {
-      "field": "metadata_modified"
+      "field": "metadata_modified",
+      "wrapper": "get_catalog_date"
     },
     "accessLevel": {
       "extra": true,
@@ -39,10 +44,6 @@
     "describedByType": {
       "extra": true,
       "field": "Described by Type"
-    },
-    "issued": {
-      "extra": true,
-      "field": "issued"
     },
     "landingPage": {
       "field": "url"
