@@ -526,8 +526,13 @@ class Wrappers:
 
     @staticmethod
     def get_catalog_date(date_value):
-        dcat_issued = get_extra(Wrappers.pkg, 'dcat_issued')
-        dcat_modified = get_extra(Wrappers.pkg, 'dcat_modified')
+        dcat_issued = ''
+        dcat_modified = ''
+        for extra in Wrappers.pkg.get('extras', []):
+            if extra['key'] == 'dcat_issued':
+                dcat_issued = extra['value']
+            elif extra['key'] == 'dcat_modified':
+                dcat_modified = extra['value']
         if dcat_issued and dcat_modified:
             catalog_date_field = Wrappers.current_field_map.get('field')
             if catalog_date_field == 'metadata_created':
