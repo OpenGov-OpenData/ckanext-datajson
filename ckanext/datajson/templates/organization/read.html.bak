@@ -1,5 +1,5 @@
 {% ckan_extends %}
-
+{#
 {% block page_primary_action %}
     {{ super() }}
     {% if h.check_access('package_create', {'owner_org': c.group_dict.id}) %}
@@ -31,3 +31,4 @@
         {% endif %}
     {% endif %}
 {% endblock %}
+#}
