@@ -309,7 +309,8 @@ class Wrappers:
         'notplanned': 'irregular',
         'unknown': 'irregular',
         'not updated': 'irregular',
-        'other': 'irregular'
+        'other': 'irregular',
+        'point in time': 'irregular'
     }
 
     @staticmethod
