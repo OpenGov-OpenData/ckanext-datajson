@@ -98,7 +98,8 @@
           "field": "url"
         },
         "mediaType": {
-          "field": "mimetype"
+          "field": "format",
+          "wrapper": "mime_type_it"
         },
         "format": {
           "field": "format"
