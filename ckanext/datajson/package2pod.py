@@ -414,6 +414,27 @@ class Wrappers:
 
     @staticmethod
     def generate_distribution(someValue):
+        accessurl_formats = [
+            'api',
+            'arcgis map preview',
+            'arcgis map service',
+            'arcgis online map',
+            'chart',
+            'esri rest',
+            'gtfs',
+            'htm',
+            'html',
+            'map',
+            'url',
+            'wcs',
+            'web',
+            'web link',
+            'web page',
+            'website',
+            'wfs',
+            'wms',
+            'wmts'
+        ]
 
         arr = []
         package = Wrappers.pkg
@@ -455,7 +476,11 @@ class Wrappers:
             if res_url:
                 res_url = res_url.replace('http://[[REDACTED', '[[REDACTED')
                 res_url = res_url.replace('http://http', 'http')
-                if r.get('resource_type') in ['api', 'accessurl']:
+                if (
+                    r.get('resource_type') in ['api', 'accessurl']
+                    or r.get('format', '').lower() in accessurl_formats
+                    or not r.get('format')
+                ):
                     resource['accessURL'] = res_url
                     if 'mediaType' in resource:
                         resource.pop('mediaType')
@@ -513,14 +538,15 @@ class Wrappers:
 
     @staticmethod
     def mime_type_it(value):
+        mime_type = 'application/octet-stream'
         if not value:
-            return value
+            return mime_type
         formats = h.resource_formats()
         format_clean = value.lower()
         if format_clean in formats:
             mime_type = formats[format_clean][0]
-        else:
-            mime_type = value
+        if not mime_type:
+            mime_type = 'application/octet-stream'
         msg = value + ' ... BECOMES ... ' + mime_type
         log.debug(msg)
         return mime_type
