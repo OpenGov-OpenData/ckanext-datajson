@@ -417,21 +417,30 @@ class DataJsonController(BaseController):
         page = int(request.params.get('page', 1))
         dataset_list = []
 
+        # Temporarily return 3000 datasets
+        max_result = 3000
+        start = max_result * (page - 1)
+
         q = '+capacity:public' if not with_private else '*:*'
 
         fq = 'dataset_type:dataset'
         if org:
             fq += " AND organization:" + org
 
-        search_data_dict = {
-            'q': q,
-            'fq': fq,
-            'sort': 'metadata_modified desc',
-            'rows': n,
-            'start': n * (page - 1),
-        }
+        for x in range(max_result/n):
+            search_data_dict = {
+                'q': q,
+                'fq': fq,
+                'sort': 'metadata_modified desc',
+                'rows': n,
+                'start': start,
+            }
 
-        query = p.toolkit.get_action('package_search')({}, search_data_dict)
-        if len(query['results']):
-            dataset_list.extend(query['results'])
+            query = p.toolkit.get_action('package_search')({}, search_data_dict)
+            if len(query['results']):
+                dataset_list.extend(query['results'])
+                start += n
+            else:
+                break
+
         return dataset_list
