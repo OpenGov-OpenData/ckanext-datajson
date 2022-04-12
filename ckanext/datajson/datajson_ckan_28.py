@@ -1,52 +1,55 @@
-from future import standard_library
-standard_library.install_aliases()
-from builtins import zip
-from builtins import str
-from ckan import model
-from ckan import plugins as p
-from ckan.model import Session, Package
-from ckan.logic import NotFound, get_action
-from ckan.logic.validators import name_validator
-from ckan.lib.munge import munge_title_to_name
-from ckan.lib.navl.dictization_functions import Invalid, DataError
-from ckan.lib.navl.validators import ignore_empty
-from ckan.lib.search import rebuild
+from functools import partial
 
-from ckanext.harvest.model import HarvestObject, HarvestObjectError, HarvestObjectExtra
-from ckanext.harvest.harvesters.base import HarvesterBase
-from ckanext.datajson.exceptions import ParentNotHarvestedException
-import uuid
+import six
+from future import standard_library
+
+standard_library.install_aliases()
 import hashlib
 import json
-import yaml
+import logging
 import os
+import uuid
+from builtins import str, zip
 
-from jsonschema.validators import Draft4Validator
+import yaml
+from ckan import model
+from ckan import plugins as p
+from ckan.lib.munge import munge_title_to_name
+from ckan.lib.navl.dictization_functions import DataError, Invalid
+from ckan.lib.navl.validators import ignore_empty
+from ckan.lib.search import rebuild
+from ckan.logic import NotFound, get_action
+from ckan.logic.validators import name_validator
+from ckan.model import Package, Session
 from jsonschema import FormatChecker
-
+from jsonschema.validators import Draft4Validator
 from sqlalchemy.exc import IntegrityError
 
-import logging
+from ckanext.datajson.exceptions import ParentNotHarvestedException
+from ckanext.harvest.harvesters.base import HarvesterBase
+from ckanext.harvest.model import (HarvestObject, HarvestObjectError,
+                                   HarvestObjectExtra)
+
 log = logging.getLogger(__name__)
 
 # watch out for these keys that their string values might go beyond Solr capacity
 # https://github.com/GSA/datagov-deploy/issues/953
-SIZE_CHECK_KEYS = ['spatial']
+SIZE_CHECK_KEYS = ["spatial"]
 MAX_SIZE = 32766
-VALIDATION_SCHEMA = [('', 'Project Open Data (Federal)'),
-                     ('non-federal', 'Project Open Data (Non-Federal)'), ]
+VALIDATION_SCHEMA = [("", "Project Open Data (Federal)"),
+                     ("non-federal", "Project Open Data (Non-Federal)"), ]
 
 
 def validate_schema(schema):
     if schema not in [s[0] for s in VALIDATION_SCHEMA]:
-        raise Invalid('Unknown validation schema: {0}'.format(schema))
+        raise Invalid("Unknown validation schema: {0}".format(schema))
     return schema
 
 
 class DatasetHarvesterBase(HarvesterBase):
-    '''
+    """
     A Harvester for datasets.
-    '''
+    """
     _user_name = None
 
     # SUBCLASSES MUST IMPLEMENT
@@ -73,18 +76,18 @@ class DatasetHarvesterBase(HarvesterBase):
                              # handled by the actual importer module, so the field names may be arbitrary
         }
 
-        if harvest_source.config is None or harvest_source.config == '':
-            harvest_source.config = '{}'
+        if harvest_source.config is None or harvest_source.config == "":
+            harvest_source.config = "{}"
         source_config = json.loads(harvest_source.config)
-        log.debug('SOURCE CONFIG from DB {}'.format(source_config))
+        log.debug("SOURCE CONFIG from DB {}".format(source_config))
         ret.update(source_config)
 
         return ret
 
     def _get_user_name(self):
         if not self._user_name:
-            user = p.toolkit.get_action('get_site_user')({'model': model, 'ignore_auth': True}, {})
-            self._user_name = user['name']
+            user = p.toolkit.get_action("get_site_user")({"model": model, "ignore_auth": True}, {})
+            self._user_name = user["name"]
 
         return self._user_name
 
@@ -105,14 +108,14 @@ class DatasetHarvesterBase(HarvesterBase):
 
     def extra_schema(self):
         return {
-            'validator_schema': [ignore_empty, str, validate_schema],
+            "validator_schema": [ignore_empty, str, validate_schema],
         }
 
     def gather_stage(self, harvest_job):
         # The gather stage scans a remote resource (like a /data.json file) for
         # a list of datasets to import.
 
-        log.debug('In %s gather_stage (%s)' % (repr(self), harvest_job.source.url))
+        log.debug("In %s gather_stage (%s)" % (repr(self), harvest_job.source.url))
 
         # Start gathering.
         try:
@@ -124,31 +127,31 @@ class DatasetHarvesterBase(HarvesterBase):
         if len(source_datasets) == 0:
             return []
 
-        DATAJSON_SCHEMA = {"https://project-open-data.cio.gov/v1.1/schema": '1.1', }
+        DATAJSON_SCHEMA = {"https://project-open-data.cio.gov/v1.1/schema": "1.1", }
 
         # schema version is default 1.0, or a valid one (1.1, ...)
-        schema_version = '1.0'
+        schema_version = "1.0"
         parent_identifiers = set()
         child_identifiers = set()
         catalog_extras = {}
         if isinstance(catalog_values, dict):
-            schema_value = catalog_values.get('conformsTo', '')
+            schema_value = catalog_values.get("conformsTo", "")
             if schema_value not in list(DATAJSON_SCHEMA.keys()):
-                self._save_gather_error('Error reading json schema value.'
-                                        ' The given value is %s.' % ('empty' if schema_value == ''
+                self._save_gather_error("Error reading json schema value."
+                                        " The given value is %s." % ("empty" if schema_value == ""
                                                                      else schema_value), harvest_job)
                 return []
-            schema_version = DATAJSON_SCHEMA.get(schema_value, '1.0')
+            schema_version = DATAJSON_SCHEMA.get(schema_value, "1.0")
 
             for dataset in source_datasets:
-                parent_identifier = dataset.get('isPartOf')
+                parent_identifier = dataset.get("isPartOf")
                 if parent_identifier:
                     parent_identifiers.add(parent_identifier)
-                    child_identifiers.add(dataset.get('identifier'))
+                    child_identifiers.add(dataset.get("identifier"))
 
             # get a list of needed catalog values and put into hobj
-            catalog_fields = ['@context', '@id', 'conformsTo', 'describedBy']
-            catalog_extras = dict(('catalog_' + k, v)
+            catalog_fields = ["@context", "@id", "conformsTo", "describedBy"]
+            catalog_extras = dict(("catalog_" + k, v)
                                   for (k, v) in catalog_values.items()
                                   if k in catalog_fields)
 
@@ -161,9 +164,9 @@ class DatasetHarvesterBase(HarvesterBase):
         existing_parents = {}
         for hobj in model.Session.query(HarvestObject).filter_by(source=harvest_job.source, current=True):
             try:
-                pkg = get_action('package_show')(self.context(), {"id": hobj.package_id})
+                pkg = get_action("package_show")(self.context(), {"id": hobj.package_id})
             except Exception:
-                # reference is broken
+                log.debug('Can not get a package %s', hobj.package_id, exc_info=True)
                 continue
             sid = self.find_extra(pkg, "identifier")
             is_parent = self.find_extra(pkg, "collection_metadata")
@@ -217,32 +220,32 @@ class DatasetHarvesterBase(HarvesterBase):
                 continue
 
             # Some source contains duplicate identifiers. skip all except the first one
-            if dataset['identifier'] in unique_datasets:
-                self._save_gather_error("Duplicate entry ignored for identifier: '%s'." % (dataset['identifier']), harvest_job)
+            if dataset["identifier"] in unique_datasets:
+                self._save_gather_error("Duplicate entry ignored for identifier: '%s'." % (dataset["identifier"]), harvest_job)
                 continue
-            unique_datasets.add(dataset['identifier'])
+            unique_datasets.add(dataset["identifier"])
 
             # Get the package_id of this resource if we've already imported
             # it into our system. Otherwise, assign a brand new GUID to the
             # HarvestObject. I'm not sure what the point is of that.
 
-            log.info('Check existing dataset: {}'.format(dataset['identifier']))
-            if dataset['identifier'] in existing_datasets:
+            log.info("Check existing dataset: {}".format(dataset["identifier"]))
+            if dataset["identifier"] in existing_datasets:
                 pkg = existing_datasets[dataset["identifier"]]
                 pkg_id = pkg["id"]
-                seen_datasets.add(dataset['identifier'])
+                seen_datasets.add(dataset["identifier"])
 
                 # We store a hash of the dict associated with this dataset
                 # in the package so we can avoid updating datasets that
                 # don't look like they've changed.
                 if pkg.get("state") == "active" \
-                        and dataset['identifier'] not in existing_parents_demoted \
-                        and dataset['identifier'] not in existing_datasets_promoted \
+                        and dataset["identifier"] not in existing_parents_demoted \
+                        and dataset["identifier"] not in existing_datasets_promoted \
                         and self.find_extra(pkg, "source_hash") == self.make_upstream_content_hash(dataset,
                                                                                                    source,
                                                                                                    catalog_extras,
                                                                                                    schema_version):
-                    log.info('SKIP: {}'.format(dataset['identifier']))
+                    log.info("SKIP: {}".format(dataset["identifier"]))
                     continue
             else:
                 pkg_id = uuid.uuid4().hex
@@ -251,23 +254,23 @@ class DatasetHarvesterBase(HarvesterBase):
             # existing dataset (if it exists here already) and the dataset's
             # metadata from the remote catalog file.
             extras = [HarvestObjectExtra(
-                key='schema_version', value=schema_version)]
-            if dataset['identifier'] in parent_identifiers:
+                key="schema_version", value=schema_version)]
+            if dataset["identifier"] in parent_identifiers:
                 extras.append(HarvestObjectExtra(
-                    key='is_collection', value=True))
-            elif dataset.get('isPartOf'):
-                is_part_of = dataset.get('isPartOf')
+                    key="is_collection", value=True))
+            elif dataset.get("isPartOf"):
+                is_part_of = dataset.get("isPartOf")
                 existing_parent = existing_parents.get(is_part_of, None)
                 if existing_parent is None:  # maybe the parent is not harvested yet
-                    parent_pkg_id = 'IPO:{}'.format(is_part_of)
+                    parent_pkg_id = "IPO:{}".format(is_part_of)
                 else:
-                    parent_pkg_id = existing_parent['id']
+                    parent_pkg_id = existing_parent["id"]
                 extras.append(HarvestObjectExtra(
-                    key='collection_pkg_id', value=parent_pkg_id))
+                    key="collection_pkg_id", value=parent_pkg_id))
             for k, v in catalog_extras.items():
                 extras.append(HarvestObjectExtra(key=k, value=v))
 
-            log.info('Datajson creates a HO: {}'.format(dataset['identifier']))
+            log.info("Datajson creates a HO: {}".format(dataset["identifier"]))
             obj = HarvestObject(
                 guid=pkg_id,
                 job=harvest_job,
@@ -278,7 +281,7 @@ class DatasetHarvesterBase(HarvesterBase):
 
             # we are sorting parent datasets in the list first and then children so that the parents are
             # harvested first, we then use the parent id to associate the children to the parent
-            if dataset['identifier'] in parent_identifiers:
+            if dataset["identifier"] in parent_identifiers:
                 object_ids.insert(0, obj.id)
             else:
                 object_ids.append(obj.id)
@@ -290,10 +293,10 @@ class DatasetHarvesterBase(HarvesterBase):
             if pkg.get("state") == "deleted":
                 continue  # already deleted
             pkg["state"] = "deleted"
-            log.warn('deleting package %s (%s) because it is no longer in %s' % (pkg["name"],
-                                                                                 pkg["id"],
-                                                                                 harvest_job.source.url))
-            get_action('package_update')(self.context(), pkg)
+            log.warning("deleting package %s (%s) because it is no longer in %s" % (pkg["name"],
+                                                                                    pkg["id"],
+                                                                                    harvest_job.source.url))
+            get_action("package_update")(self.context(), pkg)
             obj = HarvestObject(guid=pkg_id,
                                 package_id=pkg["id"],
                                 job=harvest_job, )
@@ -316,19 +319,21 @@ class DatasetHarvesterBase(HarvesterBase):
     # validate dataset against POD schema
     # use a local copy.
     def _validate_dataset(self, validator_schema, schema_version, dataset):
-        if validator_schema == 'non-federal':
-            if schema_version == '1.1':
-                file_path = 'pod_schema/non-federal-v1.1/dataset-non-federal.json'
+        if validator_schema == "non-federal":
+            if schema_version == "1.1":
+                file_path = "pod_schema/non-federal-v1.1/dataset-non-federal.json"
             else:
-                file_path = 'pod_schema/non-federal/single_entry.json'
+                file_path = "pod_schema/non-federal/single_entry.json"
         else:
-            if schema_version == '1.1':
-                file_path = 'pod_schema/federal-v1.1/dataset.json'
+            if schema_version == "1.1":
+                file_path = "pod_schema/federal-v1.1/dataset.json"
             else:
-                file_path = 'pod_schema/single_entry.json'
-
-        with open(os.path.join(
-                os.path.dirname(__file__), file_path)) as json_file:
+                file_path = "pod_schema/single_entry.json"
+        if six.PY3:
+            c_open = partial(open, encoding='utf8')
+        else:
+            c_open = open
+        with c_open(os.path.join(os.path.dirname(__file__), file_path)) as json_file:
             schema = json.load(json_file)
 
         msg = ";"
@@ -349,17 +354,17 @@ class DatasetHarvesterBase(HarvesterBase):
         msg = e.message.replace("u'", "'")
         elem = ""
         try:
-            if e.schema_path[0] == 'properties':
+            if e.schema_path[0] == "properties":
                 elem = e.schema_path[1]
                 elem = "'" + elem + "':"
         except Exception:
-            pass
+            log.debug("%s has invalid schema_path.", msg)
 
         return elem + msg
 
     def _size_check(self, key, value):
         if key in SIZE_CHECK_KEYS and value is not None and len(value) >= MAX_SIZE:
-            raise DataError('%s: Maximum allowed size is %i. Actual size is %i.' % (
+            raise DataError("%s: Maximum allowed size is %i. Actual size is %i." % (
                 key, MAX_SIZE, len(value)
             ))
 
@@ -375,31 +380,30 @@ class DatasetHarvesterBase(HarvesterBase):
             and returns the parent dataset or raises an ParentNotHarvestedException.
             Only search for datasets that are the parent of a collection.
             """
-        ps = p.toolkit.get_action('package_search')
-        query = 'extras_identifier:{} AND extras_collection_metadata:true'.format(ipo)
+        ps = p.toolkit.get_action("package_search")
+        query = "extras_identifier:{} AND extras_collection_metadata:true".format(ipo)
         results = ps(self.context(), {"fq": query})
-        log.info('Package search results {}'.format(results))
+        log.info("Package search results {}".format(results))
 
-        if results['count'] > 0:  # event if we have only one we need to be sure is the parent I need
+        if results["count"] > 0:  # event if we have only one we need to be sure is the parent I need
             # possible check identifier collision
             # check the URL of the source to validate
-            datasets = results['results']
+            datasets = results["results"]
             harvest_source = harvest_object.source
 
             for dataset in datasets:
-                extras = dataset.get('extras', [])
-                identifiers = [extra['value'] for extra in extras if extra['key'] == 'identifier']
+                extras = dataset.get("extras", [])
+                identifiers = [extra["value"] for extra in extras if extra["key"] == "identifier"]
                 if ipo not in identifiers:
-                    log.error('BAD SEARCH for {}:{}'.format(ipo, identifiers))
+                    log.error("BAD SEARCH for {}:{}".format(ipo, identifiers))
                     continue
 
-                dataset_harvest_source_id = self.get_harvest_source_id(dataset['id'])
+                dataset_harvest_source_id = self.get_harvest_source_id(dataset["id"])
 
                 if harvest_source.id == dataset_harvest_source_id:
-                    log.info('Parent dataset identified correctly')
+                    log.info("Parent dataset identified correctly")
                     return dataset
-                else:
-                    log.info('{} not found at {} for {}'.format(harvest_source.id, dataset_harvest_source_id, ipo))
+                log.info("{} not found at {} for {}".format(harvest_source.id, dataset_harvest_source_id, ipo))
 
         # we have 0 o bad results
         msg = 'Parent identifier not found: "{}"'.format(ipo)
@@ -410,73 +414,73 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_object.state = "ERROR"
             harvest_object.save()
         except Exception:
-            pass
-        raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
+            log.info("Failed to store harvest error to DB")
+        raise ParentNotHarvestedException("Unable to find parent dataset. Raising error to allow re-run later")
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
 
-        log.debug('In %s import_stage' % repr(self))
+        log.debug("In %s import_stage" % repr(self))
 
-        if(harvest_object.content is None):
+        if harvest_object.content is None:
             return True
 
         dataset = json.loads(harvest_object.content)
-        schema_version = '1.0'  # default to '1.0'
+        schema_version = "1.0"  # default to '1.0'
         is_collection = False
-        parent_pkg_id = ''
+        parent_pkg_id = ""
         catalog_extras = {}
         for extra in harvest_object.extras:
-            if extra.key == 'schema_version':
+            if extra.key == "schema_version":
                 schema_version = extra.value
-            if extra.key == 'is_collection' and extra.value:
+            if extra.key == "is_collection" and extra.value:
                 is_collection = True
-            if extra.key == 'collection_pkg_id' and extra.value:
+            if extra.key == "collection_pkg_id" and extra.value:
                 parent_pkg_id = extra.value
-                if parent_pkg_id.startswith('IPO:'):
+                if parent_pkg_id.startswith("IPO:"):
                     # it's an IsPartOf ("identifier" at the external source)
-                    log.info('IPO found {}'.format(parent_pkg_id))
+                    log.info("IPO found {}".format(parent_pkg_id))
 
                     #  check if parent is already harvested
-                    parent_identifier = parent_pkg_id.replace('IPO:', '')
+                    parent_identifier = parent_pkg_id.replace("IPO:", "")
                     parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
-                    parent_pkg_id = parent['id']
+                    parent_pkg_id = parent["id"]
 
-            if extra.key.startswith('catalog_'):
+            if extra.key.startswith("catalog_"):
                 catalog_extras[extra.key] = extra.value
 
             # if this dataset is part of collection, we need to check if
-            # parent dataset exist or not. we dont support any hierarchy
+            # parent dataset exist or not. we don't support any hierarchy
             # in this, so the check does not apply to those of is_collection
             if parent_pkg_id and not is_collection:
                 parent_pkg = None
                 try:
-                    parent_pkg = get_action('package_show')(self.context(),
+                    parent_pkg = get_action("package_show")(self.context(),
                                                             {"id": parent_pkg_id})
                 except Exception:
-                    pass
+                    log.debug("Can not get package %s", parent_pkg_id)
                 if not parent_pkg:
                     parent_check_message = "isPartOf identifer '%s' not found." \
-                        % dataset.get('isPartOf')
+                        % dataset.get("isPartOf")
                     self._save_object_error(parent_check_message, harvest_object,
-                                            'Import')
-                    return None
+                                            "Import")
+                    return
 
         # do title check here
         # https://github.com/GSA/datagov-deploy/issues/953
-        title_to_check = self.make_package_name(dataset.get('title'), harvest_object.guid)
+        title_to_check = self.make_package_name(dataset.get("title"), harvest_object.guid)
         try:
             name_validator(title_to_check, None)
         except Invalid as e:
-            invalid_message = "title: %s. %s." % (dataset.get('title'), e.error)
-            self._save_object_error(invalid_message, harvest_object, 'Import')
+            invalid_message = "title: %s. %s." % (dataset.get("title"), e.error)
+            self._save_object_error(invalid_message, harvest_object, "Import")
             return None
 
         # Get default values.
         source_config = self.load_config(harvest_object.source)
         dataset_defaults = source_config["defaults"]
-        validator_schema = source_config.get('validator_schema')
-        if schema_version == '1.0' and validator_schema != 'non-federal':
+        validator_schema = source_config.get("validator_schema")
+        if schema_version == "1.0" and validator_schema != "non-federal":
             lowercase_conversion = True
         else:
             lowercase_conversion = False
@@ -562,36 +566,36 @@ class DatasetHarvesterBase(HarvesterBase):
 
             skip_processed = [k.lower() for k in SKIP]
 
-            dataset_processed = {'processed_how': ['lowercase']}
+            dataset_processed = {"processed_how": ["lowercase"]}
             for k, v in list(dataset.items()):
                 if k.lower() in list(mapping_processed.keys()):
                     dataset_processed[k.lower()] = v
                 else:
                     dataset_processed[k] = v
 
-            if 'distribution' in dataset and dataset['distribution'] is not None:
-                dataset_processed['distribution'] = []
-                for d in dataset['distribution']:
+            if "distribution" in dataset and dataset["distribution"] is not None:
+                dataset_processed["distribution"] = []
+                for d in dataset["distribution"]:
                     d_lower = {}
                     for k, v in list(d.items()):
                         if k.lower() in list(mapping_processed.keys()):
                             d_lower[k.lower()] = v
                         else:
                             d_lower[k] = v
-                dataset_processed['distribution'].append(d_lower)
+                dataset_processed["distribution"].append(d_lower)
         else:
             dataset_processed = dataset
             mapping_processed = MAPPING
             skip_processed = SKIP
 
-        if schema_version == '1.1':
+        if schema_version == "1.1":
             mapping_processed = MAPPING_V1_1
             skip_processed = SKIP_V1_1
 
         validate_message = self._validate_dataset(validator_schema,
                                                   schema_version, dataset_processed)
         if validate_message:
-            self._save_object_error(validate_message, harvest_object, 'Import')
+            self._save_object_error(validate_message, harvest_object, "Import")
             return None
 
         # We need to get the owner organization (if any) from the harvest
@@ -601,7 +605,7 @@ class DatasetHarvesterBase(HarvesterBase):
         if source_dataset.owner_org:
             owner_org = source_dataset.owner_org
 
-        group_name = source_config.get('default_groups', '')
+        group_name = source_config.get("default_groups", "")
 
         # Assemble basic information about the dataset.
 
@@ -650,7 +654,7 @@ class DatasetHarvesterBase(HarvesterBase):
             try:
                 self._size_check(key, value)
             except DataError as e:
-                self._save_object_error(e.error, harvest_object, 'Import')
+                self._save_object_error(e.error, harvest_object, "Import")
                 return None
 
             if key in skip_processed:
@@ -680,7 +684,7 @@ class DatasetHarvesterBase(HarvesterBase):
             for mini_key, mini_value in mini_dataset.items():
                 if not mini_value:
                     continue
-                if mini_key.startswith('extras__'):
+                if mini_key.startswith("extras__"):
                     extras.append({"key": mini_key[8:], "value": mini_value})
                 else:
                     pkg[mini_key] = mini_value
@@ -696,18 +700,18 @@ class DatasetHarvesterBase(HarvesterBase):
 
         # if theme is geospatial/Geospatial, we tag it in metadata_type.
         themes = self.find_extra(pkg, "theme")
-        if themes and ('geospatial' in [x.lower() for x in themes]):
-            extras.append({'key': 'metadata_type', 'value': 'geospatial'})
+        if themes and ("geospatial" in [x.lower() for x in themes]):
+            extras.append({"key": "metadata_type", "value": "geospatial"})
 
         if is_collection:
-            extras.append({'key': 'collection_metadata', 'value': 'true'})
+            extras.append({"key": "collection_metadata", "value": "true"})
         elif parent_pkg_id:
             extras.append(
-                {'key': 'collection_package_id', 'value': parent_pkg_id}
+                {"key": "collection_package_id", "value": parent_pkg_id}
             )
 
         for k, v in catalog_extras.items():
-            extras.append({'key': k, 'value': v})
+            extras.append({"key": k, "value": v})
 
         # Set specific information about the dataset.
         self.set_dataset_info(pkg, dataset_processed, dataset_defaults, schema_version)
@@ -715,7 +719,7 @@ class DatasetHarvesterBase(HarvesterBase):
         # Try to update an existing package with the ID set in harvest_object.guid. If that GUID
         # corresponds with an existing package, get its current metadata.
         try:
-            existing_pkg = get_action('package_show')(self.context(), {"id": harvest_object.guid})
+            existing_pkg = get_action("package_show")(self.context(), {"id": harvest_object.guid})
         except NotFound:
             existing_pkg = None
 
@@ -728,27 +732,27 @@ class DatasetHarvesterBase(HarvesterBase):
                 for existing_res in existing_pkg.get("resources", []):
                     if res["url"] == existing_res["url"]:
                         res["id"] = existing_res["id"]
-            pkg['groups'] = existing_pkg['groups']
+            pkg["groups"] = existing_pkg["groups"]
             existing_pkg.update(pkg)  # preserve other fields that we're not setting, but clobber extras
             pkg = existing_pkg
 
-            log.warn('updating package %s (%s) from %s' % (pkg["name"], pkg["id"], harvest_object.source.url))
-            pkg = get_action('package_update')(self.context(), pkg)
+            log.warning("updating package %s (%s) from %s" % (pkg["name"], pkg["id"], harvest_object.source.url))
+            pkg = get_action("package_update")(self.context(), pkg)
         else:
-            # It doesn't exist yet. Create a new one.
-            pkg['name'] = self.make_package_name(dataset_processed["title"], harvest_object.guid)
+            # It doesn"t exist yet. Create a new one.
+            pkg["name"] = self.make_package_name(dataset_processed["title"], harvest_object.guid)
             try:
-                pkg = get_action('package_create')(self.context(), pkg)
-                log.warn('created package %s (%s) from %s' % (pkg["name"], pkg["id"], harvest_object.source.url))
+                pkg = get_action("package_create")(self.context(), pkg)
+                log.warning("created package %s (%s) from %s" % (pkg["name"], pkg["id"], harvest_object.source.url))
             except IntegrityError:
                 # sometimes one fetch worker does not see new pkg added
                 # by other workers. it gives db error for pkg with same title.
                 model.Session.rollback()
-                pkg['name'] = self.make_package_name(dataset_processed["title"], harvest_object.guid)
-                pkg = get_action('package_create')(self.context(), pkg)
-                log.warn('created package %s (%s) from %s' % (pkg["name"], pkg["id"], harvest_object.source.url))
+                pkg["name"] = self.make_package_name(dataset_processed["title"], harvest_object.guid)
+                pkg = get_action("package_create")(self.context(), pkg)
+                log.warning("created package %s (%s) from %s" % (pkg["name"], pkg["id"], harvest_object.source.url))
             except Exception as e:
-                log.error('Failed to create package %s from %s\n\t%s\n\t%s' % (pkg["name"],
+                log.error("Failed to create package %s from %s\n\t%s\n\t%s" % (pkg["name"],
                                                                                harvest_object.source.url,
                                                                                str(pkg),
                                                                                str(e)))
@@ -760,7 +764,7 @@ class DatasetHarvesterBase(HarvesterBase):
             ob.save()
 
         # Flag this HarvestObject as the current harvest object
-        harvest_object.package_id = pkg['id']
+        harvest_object.package_id = pkg["id"]
         harvest_object.current = True
         harvest_object.save()
         model.Session.commit()
@@ -770,19 +774,18 @@ class DatasetHarvesterBase(HarvesterBase):
         # does this by creating the association before the package is saved by
         # overriding the GUID creation on a new package. That's too difficult.
         # So here we end up indexing twice.
-        rebuild(pkg['id'])
+        rebuild(pkg["id"])
 
         return True
 
     def make_upstream_content_hash(self, datasetdict, harvest_source,
-                                   catalog_extras, schema_version='1.0'):
-        if schema_version == '1.0':
-            return hashlib.sha1(json.dumps(datasetdict, sort_keys=True) +  # NOQA W504
-                                "|" + harvest_source.config + "|" +  # NOQA W504
-                                self.HARVESTER_VERSION).hexdigest()
-        else:
-            return hashlib.sha1((json.dumps(datasetdict, sort_keys=True) + "|" + json.dumps(catalog_extras,
-                                sort_keys=True)).encode('utf-8')).hexdigest()
+                                   catalog_extras, schema_version="1.0"):
+        if schema_version == "1.0":
+            return hashlib.sha256(json.dumps(datasetdict, sort_keys=True) +  # NOQA W504
+                                  "|" + harvest_source.config + "|" +  # NOQA W504
+                                  self.HARVESTER_VERSION).hexdigest()
+        return hashlib.sha256((json.dumps(datasetdict, sort_keys=True) + "|" + json.dumps(catalog_extras,
+                              sort_keys=True)).encode("utf-8")).hexdigest()
 
     def find_extra(self, pkg, key):
         for extra in pkg["extras"]:
@@ -791,15 +794,15 @@ class DatasetHarvesterBase(HarvesterBase):
         return None
 
     def make_package_name(self, title, exclude_existing_package):
-        '''
+        """
         Creates a URL friendly name from a title
 
         If the name already exists, it will add some random characters at the end
-        '''
+        """
 
-        name = munge_title_to_name(title).replace('_', '-')
-        while '--' in name:
-            name = name.replace('--', '-')
+        name = munge_title_to_name(title).replace("_", "-")
+        while "--" in name:
+            name = name.replace("--", "-")
         name = name[0:90]  # max length is 100
 
         # Is this slug already in use (and if we're updating a package, is it in

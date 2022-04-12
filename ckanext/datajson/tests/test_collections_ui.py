@@ -1,14 +1,19 @@
 from __future__ import absolute_import
+
 import logging
-from . import mock_datajson_source
+
 from ckan import model
+
 import ckanext.harvest.model as harvest_model
 from ckanext.datajson.harvester_datajson import DataJsonHarvester
+
+from . import mock_datajson_source
 from .factories import HarvestJobObj, HarvestSourceObj
+
 try:
-    from ckan.tests import helpers, factories
+    from ckan.tests import factories, helpers
 except ImportError:
-    from ckan.new_tests import helpers, factories
+    from ckan.new_tests import factories, helpers
 
 log = logging.getLogger(__name__)
 

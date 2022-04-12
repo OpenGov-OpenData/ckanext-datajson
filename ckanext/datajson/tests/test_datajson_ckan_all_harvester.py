@@ -1,33 +1,35 @@
 from __future__ import absolute_import
+
 from future import standard_library
+
 standard_library.install_aliases()
-from builtins import object
-from datetime import datetime
 import json
 import logging
-import six
-
-import pytest
-
-from urllib.error import URLError
+from builtins import object
+from datetime import datetime
+from requests.exceptions import InvalidURL, SSLError
 
 import ckan.plugins as p
-import ckanext.harvest.model as harvest_model
-import ckanext.harvest.queue as queue
-from . import mock_datajson_source
+import pytest
+import six
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
-from ckanext.datajson.harvester_datajson import DataJsonHarvester
-from ckanext.datajson.exceptions import ParentNotHarvestedException
-from .factories import HarvestJobObj, HarvestSourceObj
 from mock import Mock, patch
 
+import ckanext.harvest.model as harvest_model
+import ckanext.harvest.queue as queue
+from ckanext.datajson.exceptions import ParentNotHarvestedException
+from ckanext.datajson.harvester_datajson import DataJsonHarvester
+
+from . import mock_datajson_source
+from .factories import HarvestJobObj, HarvestSourceObj
+
 try:
-    from ckan.tests.helpers import reset_db
     from ckan.tests.factories import Organization, Sysadmin
+    from ckan.tests.helpers import reset_db
 except ImportError:
-    from ckan.new_tests.helpers import reset_db
     from ckan.new_tests.factories import Organization, Sysadmin
+    from ckan.new_tests.helpers import reset_db
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ class TestDataJSONHarvester(object):
 
         if len(obj_ids) == 0:
             # nothing to see
-            log.error("NO objects found")
+            log.error('NO objects found')
             return
 
         for obj_id in obj_ids:
@@ -112,9 +114,9 @@ class TestDataJSONHarvester(object):
 
             if len(harvest_object.errors) > 0:
                 self.errors = harvest_object.errors
-                harvest_object.state = "ERROR"
+                harvest_object.state = 'ERROR'
 
-            harvest_object.state = "COMPLETE"
+            harvest_object.state = 'COMPLETE'
             harvest_object.save()
 
             log.info('ho pkg id=%s', harvest_object.package_id)
@@ -133,8 +135,8 @@ class TestDataJSONHarvester(object):
         return datasets
 
     def test_datajson_collection(self):
-        """ harvest from a source with a parent in the second place
-            We expect the gather stage to re-order to the forst place """
+        ''' harvest from a source with a parent in the second place
+            We expect the gather stage to re-order to the forst place '''
         url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % self.mock_port
         obj_ids = self.run_gather(url=url)
 
@@ -149,9 +151,9 @@ class TestDataJSONHarvester(object):
         assert expected_obj_ids == identifiers
 
     def test_harvesting_parent_child_collections(self):
-        """ Test that parent are beeing harvested first.
+        ''' Test that parent are beeing harvested first.
             When we harvest a child the parent must exists
-            data.json from: https://www.opm.gov/data.json """
+            data.json from: https://www.opm.gov/data.json '''
 
         url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % self.mock_port
         obj_ids = self.run_gather(url=url)
@@ -195,50 +197,51 @@ class TestDataJSONHarvester(object):
         datasets = self.run_source(url=url)
         dataset = datasets[0]
         # assert first element on list
-        expected_title = "NCEP GFS: vertical profiles of met quantities at standard pressures, at Barrow"
+        expected_title = 'NCEP GFS: vertical profiles of met quantities at standard pressures, at Barrow'
         assert dataset.title == expected_title
         tags = [tag.name for tag in dataset.get_tags()]
-        assert munge_title_to_name("ORNL") in tags
+        assert munge_title_to_name('ORNL') in tags
         assert len(dataset.resources) == 1
 
     def test_datason_usda(self):
         url = 'http://127.0.0.1:%s/usda' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
-        expected_title = "Department of Agriculture Congressional Logs for Fiscal Year 2014"
+        expected_title = 'Department of Agriculture Congressional Logs for Fiscal Year 2014'
         assert dataset.title == expected_title
         tags = [tag.name for tag in dataset.get_tags()]
         assert len(dataset.resources) == 1
-        assert munge_title_to_name("Congressional Logs") in tags
+        assert munge_title_to_name('Congressional Logs') in tags
 
     def test_source_returning_http_error(self):
         url = 'http://127.0.0.1:%s/404' % self.mock_port
         self.run_source(url)
 
-        pytest.raises(URLError)
-        assert self.job.gather_errors[0].message == "HTTP Error getting json source: HTTP Error 404: Not Found."
+        pytest.raises(InvalidURL)
+        assert self.job.gather_errors[0].message == ('HTTP Error getting json source: 404 Client Error: '
+                                                     'Not Found for url: http://127.0.0.1:8961/404.')
         if six.PY2:
-            assert self.job.gather_errors[1].message == ("Error loading json content: need more "
-                                                         "than 0 values to unpack.")
+            assert self.job.gather_errors[1].message == ('Error loading json content: need more '
+                                                         'than 0 values to unpack.')
         else:
-            assert self.job.gather_errors[1].message == ("Error loading json content:"
-                                                         " not enough values to unpack"
-                                                         " (expected 2, got 0).")
+            assert self.job.gather_errors[1].message == ('Error loading json content:'
+                                                         ' not enough values to unpack'
+                                                         ' (expected 2, got 0).')
 
     def test_source_returning_url_error(self):
         # URL failing SSL
         url = 'https://127.0.0.1:%s' % self.mock_port
         self.run_source(url)
 
-        pytest.raises(URLError)
-        assert "URL Error getting json source: <urlopen error" in self.job.gather_errors[0].message
+        pytest.raises(SSLError)
+        assert 'URL Error getting json source:' in self.job.gather_errors[0].message
         if six.PY2:
-            assert self.job.gather_errors[1].message == ("Error loading json content: need more "
-                                                         "than 0 values to unpack.")
+            assert self.job.gather_errors[1].message == ('Error loading json content: need more '
+                                                         'than 0 values to unpack.')
         else:
-            assert self.job.gather_errors[1].message == ("Error loading json content:"
-                                                         " not enough values to unpack"
-                                                         " (expected 2, got 0).")
+            assert self.job.gather_errors[1].message == ('Error loading json content:'
+                                                         ' not enough values to unpack'
+                                                         ' (expected 2, got 0).')
 
     def get_datasets_from_2_collection(self):
         url = 'http://127.0.0.1:%s/collection-2-parent-4-children.data.json' % self.mock_port
@@ -255,15 +258,15 @@ class TestDataJSONHarvester(object):
     def test_new_job_created(self, mock_harvest_source_show):
 
         def ps(context, data):
-            return {u'id': self.source.id,
-                    u'title': self.source.title,
-                    u'state': u'active',
-                    u'type': u'harvest',
-                    u'source_type': self.source.type,
-                    u'name': u'test_source_0',
-                    u'active': False,
-                    u'url': self.source.url,
-                    u'extras': []}
+            return {'id': self.source.id,
+                    'title': self.source.title,
+                    'state': 'active',
+                    'type': 'harvest',
+                    'source_type': self.source.type,
+                    'name': 'test_source_0',
+                    'active': False,
+                    'url': self.source.url,
+                    'extras': []}
 
         mock_harvest_source_show.side_effect = ps
 
@@ -272,7 +275,7 @@ class TestDataJSONHarvester(object):
         context = {'model': model, 'user': self.user['name'], 'session': model.Session}
 
         # fake job status before final RUN command.
-        self.job.status = u'Running'
+        self.job.status = 'Running'
         self.job.gather_finished = datetime.utcnow()
         self.job.save()
 
@@ -287,7 +290,7 @@ class TestDataJSONHarvester(object):
         return datasets
 
     def test_parent_child_counts(self):
-        """ Test count for parent and children """
+        ''' Test count for parent and children '''
 
         datasets = self.get_datasets_from_2_collection()
 
@@ -309,7 +312,7 @@ class TestDataJSONHarvester(object):
         assert child_counter == 4
 
     def fix_extras(self, extras):
-        """ fix extras rolled up at geodatagov """
+        ''' fix extras rolled up at geodatagov '''
         new_extras = {}
         for e in extras:
             k = e[0]
@@ -325,12 +328,12 @@ class TestDataJSONHarvester(object):
 
     # TODO: Fix test with connection to redis
     def test_raise_child_error_and_retry(self):
-        """ if a harvest job for a child fails because
+        ''' if a harvest job for a child fails because
             parent still not exists we need to ensure
             this job will be retried.
             This test emulate the case we harvest children first
             (e.g. if we have several active queues).
-            Just for CKAN 2.8 env"""
+            Just for CKAN 2.8 env'''
 
         # start harvest process with gather to create harvest objects
         url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % self.mock_port
@@ -363,19 +366,19 @@ class TestDataJSONHarvester(object):
         qname = queue.get_fetch_queue_name()
 
         # first a child and assert to get an error
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
+        r2 = json.dumps({'harvest_object_id': self.harvest_objects[1].id})
         r0 = FakeMethod(r2)
         with pytest.raises(ParentNotHarvestedException):
             queue.fetch_callback(consumer_fetch, r0, None, r2)
         assert self.harvest_objects[1].retry_times == 1
-        assert self.harvest_objects[1].state == "ERROR"
+        assert self.harvest_objects[1].state == 'ERROR'
 
         # run the parent later, like in a different queue
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[0].id})
+        r2 = json.dumps({'harvest_object_id': self.harvest_objects[0].id})
         r0 = FakeMethod(r2)
         queue.fetch_callback(consumer_fetch, r0, None, r2)
         assert self.harvest_objects[0].retry_times == 1
-        assert self.harvest_objects[0].state == "COMPLETE"
+        assert self.harvest_objects[0].state == 'COMPLETE'
 
         # Check status on harvest objects
         # We expect one child with error, parent ok and second child still waiting
@@ -432,9 +435,9 @@ class TestDataJSONHarvester(object):
     @patch('ckanext.datajson.harvester_datajson.DataJsonHarvester.get_harvest_source_id')
     @patch('ckan.plugins.toolkit.get_action')
     def test_parent_not_harvested_exception(self, mock_get_action, mock_get_harvest_source_id):
-        """ unit test for is_part_of_to_package_id function
+        ''' unit test for is_part_of_to_package_id function
             Test for 2 parents with the same identifier.
-            Just one belongs to the right harvest source """
+            Just one belongs to the right harvest source '''
 
         results = {'count': 2,
                    'results': [{'id': 'pkg-1',
@@ -467,7 +470,7 @@ class TestDataJSONHarvester(object):
     @patch('ckanext.datajson.harvester_datajson.DataJsonHarvester.get_harvest_source_id')
     @patch('ckan.plugins.toolkit.get_action')
     def test_is_part_of_to_package_id_one_result(self, mock_get_action, mock_get_harvest_source_id):
-        """ unit test for is_part_of_to_package_id function """
+        ''' unit test for is_part_of_to_package_id function '''
 
         results = {'count': 1,
                    'results': [{'id': 'pkg-1',
@@ -496,9 +499,9 @@ class TestDataJSONHarvester(object):
     @patch('ckanext.datajson.harvester_datajson.DataJsonHarvester.get_harvest_source_id')
     @patch('ckan.plugins.toolkit.get_action')
     def test_is_part_of_to_package_id_two_result(self, mock_get_action, mock_get_harvest_source_id):
-        """ unit test for is_part_of_to_package_id function
+        ''' unit test for is_part_of_to_package_id function
             Test for 2 parents with the same identifier.
-            Just one belongs to the right harvest source """
+            Just one belongs to the right harvest source '''
 
         results = {'count': 2,
                    'results': [{'id': 'pkg-1',
@@ -529,7 +532,7 @@ class TestDataJSONHarvester(object):
 
     @patch('ckan.plugins.toolkit.get_action')
     def test_is_part_of_to_package_id_fail_no_results(self, mock_get_action):
-        """ unit test for is_part_of_to_package_id function """
+        ''' unit test for is_part_of_to_package_id function '''
 
         def get_action(action_name):
             if action_name == 'package_search':
@@ -565,7 +568,7 @@ class TestDataJSONHarvester(object):
             self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
 
     def test_datajson_non_federal(self):
-        """ validate we get the coinfig we sent """
+        ''' validate we get the coinfig we sent '''
         url = 'http://127.0.0.1:%s/ny' % self.mock_port
         config = '{"validator_schema": "non-federal", "private_datasets": "False", "default_groups": "local"}'
         self.run_source(url, config)
@@ -580,7 +583,7 @@ class TestDataJSONHarvester(object):
         assert source_config == expected_config
 
     def test_harvesting_parent_child_2_collections(self):
-        """ Test that we have the right parents in each case """
+        ''' Test that we have the right parents in each case '''
 
         datasets = self.get_datasets_from_2_collection()
 
@@ -600,33 +603,33 @@ class TestDataJSONHarvester(object):
         url = 'http://127.0.0.1:%s/error-reserved-title' % self.mock_port
         self.run_source(url=url)
         errors = self.errors
-        expected_error_stage = "Import"
+        expected_error_stage = 'Import'
         assert errors[0].stage == expected_error_stage
-        expected_error_message = "title: Search. That name cannot be used."
+        expected_error_message = 'title: Search. That name cannot be used.'
         assert errors[0].message == expected_error_message
 
     def test_datajson_large_spatial(self):
         url = 'http://127.0.0.1:%s/error-large-spatial' % self.mock_port
         self.run_source(url=url)
         errors = self.errors
-        expected_error_stage = "Import"
+        expected_error_stage = 'Import'
         assert errors[0].stage == expected_error_stage
-        expected_error_message = "spatial: Maximum allowed size is 32766. Actual size is 309643."
+        expected_error_message = 'spatial: Maximum allowed size is 32766. Actual size is 309643.'
         assert errors[0].message == expected_error_message
 
     def test_datajson_null_spatial(self):
         url = 'http://127.0.0.1:%s/null-spatial' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
-        expected_title = "Sample Title NUll Spatial"
+        expected_title = 'Sample Title NUll Spatial'
         assert dataset.title == expected_title
 
     def test_datason_404(self):
         url = 'http://127.0.0.1:%s/404' % self.mock_port
         self.run_source(url=url)
-        pytest.raises(URLError)
+        pytest.raises(InvalidURL)
 
     def test_datason_500(self):
         url = 'http://127.0.0.1:%s/500' % self.mock_port
         self.run_source(url=url)
-        pytest.raises(URLError)
+        pytest.raises(InvalidURL)

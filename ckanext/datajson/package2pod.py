@@ -1,15 +1,26 @@
 from __future__ import absolute_import
-from builtins import str
-from builtins import range
-from builtins import object
+
+import json
+import os
+import sys
+from builtins import object, range, str
+
+import ckan.model as model
+
+try:
+    from ckan.common import config
+except ImportError:
+    from pylons import config
+
 try:
     from collections import OrderedDict  # 2.7
 except ImportError:
     from sqlalchemy.util import OrderedDict
 
-from ckan.lib import helpers as h
-from logging import getLogger
 import re
+from logging import getLogger
+
+from ckan.lib import helpers as h
 
 from . import helpers
 
@@ -60,28 +71,21 @@ class Package2Pod(object):
 
     @staticmethod
     def convert_package(package, json_export_map, redaction_enabled=False):
-        import os
-        import sys
-
         try:
             dataset = Package2Pod.export_map_fields(package, json_export_map, redaction_enabled)
 
             # skip validation if we export whole /data.json catalog
             if json_export_map.get('validation_enabled'):
                 return Package2Pod.validate(package, dataset)
-            else:
-                return dataset
+            return dataset
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error("%s : %s : %s : %s", exc_type, filename, exc_tb.tb_lineno, str(e))
+            log.error('%s : %s : %s : %s', exc_type, filename, exc_tb.tb_lineno, str(e))
             raise e
 
     @staticmethod
     def export_map_fields(package, json_export_map, redaction_enabled=False):
-        import os
-        import sys
-
         public_access_level = helpers.get_extra(package, 'public_access_level')
         if not public_access_level or public_access_level not in ['non-public', 'restricted public']:
             redaction_enabled = False
@@ -91,7 +95,7 @@ class Package2Pod(object):
         json_fields = json_export_map.get('dataset_fields_map')
 
         try:
-            dataset = OrderedDict([("@type", "dcat:Dataset")])
+            dataset = OrderedDict([('@type', 'dcat:Dataset')])
 
             Wrappers.pkg = package
             Wrappers.full_field_map = json_fields
@@ -153,32 +157,29 @@ class Package2Pod(object):
 
             # CKAN doesn't like empty values on harvest, let's get rid of them
             # Remove entries where value is None, "", or empty list []
-            dataset = OrderedDict([(x, y) for x, y in dataset.items() if y is not None and y != "" and y != []])
+            dataset = OrderedDict([(x, y) for x, y in dataset.items() if y is not None and y != '' and y != []])
 
             return dataset
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error("%s : %s : %s : %s", exc_type, filename, exc_tb.tb_lineno, str(e))
+            log.error('%s : %s : %s : %s', exc_type, filename, exc_tb.tb_lineno, str(e))
             raise e
 
     @staticmethod
     def validate(pkg, dataset_dict):
-        import os
-        import sys
-
         global currentPackageOrg
 
         try:
             # When saved from UI DataQuality value is stored as "on" instead of True.
             # Check if value is "on" and replace it with True.
             dataset_dict = OrderedDict(dataset_dict)
-            if dataset_dict.get('dataQuality') == "on" \
-                    or dataset_dict.get('dataQuality') == "true" \
-                    or dataset_dict.get('dataQuality') == "True":
+            if dataset_dict.get('dataQuality') == 'on' \
+                    or dataset_dict.get('dataQuality') == 'true' \
+                    or dataset_dict.get('dataQuality') == 'True':
                 dataset_dict['dataQuality'] = True
-            elif dataset_dict.get('dataQuality') == "false" \
-                    or dataset_dict.get('dataQuality') == "False":
+            elif dataset_dict.get('dataQuality') == 'false' \
+                    or dataset_dict.get('dataQuality') == 'False':
                 dataset_dict['dataQuality'] = False
 
             errors = []
@@ -186,10 +187,10 @@ class Package2Pod(object):
                 from .datajsonvalidator import do_validation
                 do_validation([dict(dataset_dict)], errors, Package2Pod.seen_identifiers)
             except Exception as e:
-                errors.append(("Internal Error", ["Something bad happened: " + str(e)]))
+                errors.append(('Internal Error', ['Something bad happened: ' + str(e)]))
             if len(errors) > 0:
                 for error in errors:
-                    log.warn(error)
+                    log.warning(error)
 
                 try:
                     currentPackageOrg
@@ -210,7 +211,7 @@ class Package2Pod(object):
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error("%s : %s : %s", exc_type, filename, exc_tb.tb_lineno)
+            log.error('%s : %s : %s', exc_type, filename, exc_tb.tb_lineno)
             raise e
 
 
@@ -233,8 +234,8 @@ class Wrappers(object):
         if not publisher and 'organization' in Wrappers.pkg and 'title' in Wrappers.pkg.get('organization'):
             publisher = Wrappers.pkg.get('organization').get('title')
         return OrderedDict([
-            ("@type", "org:Organization"),
-            ("name", publisher)
+            ('@type', 'org:Organization'),
+            ('name', publisher)
         ])
 
     @staticmethod
@@ -325,9 +326,6 @@ class Wrappers(object):
 
     @staticmethod
     def build_contact_point(someValue):
-        import os
-        import sys
-
         try:
             contact_point_map = Wrappers.full_field_map.get('contactPoint').get('map')
             if not contact_point_map:
@@ -337,11 +335,11 @@ class Wrappers(object):
 
             if contact_point_map.get('fn').get('extra'):
                 fn = helpers.get_extra(package, contact_point_map.get('fn').get('field'),
-                                       helpers.get_extra(package, "Contact Name",
+                                       helpers.get_extra(package, 'Contact Name',
                                                          package.get('maintainer')))
             else:
                 fn = package.get(contact_point_map.get('fn').get('field'),
-                                 helpers.get_extra(package, "Contact Name",
+                                 helpers.get_extra(package, 'Contact Name',
                                                    package.get('maintainer')))
 
             fn = helpers.get_responsible_party(fn)
@@ -381,14 +379,12 @@ class Wrappers(object):
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error("%s : %s : %s", exc_type, filename, exc_tb.tb_lineno)
+            log.error('%s : %s : %s', exc_type, filename, exc_tb.tb_lineno)
             raise e
 
     @staticmethod
     def inventory_parent_uid(parent_dataset_id):
         if parent_dataset_id:
-            import ckan.model as model
-
             parent = model.Package.get(parent_dataset_id)
             if parent and parent.extras['unique_id']:
                 parent_dataset_id = parent.extras['unique_id']
@@ -404,8 +400,8 @@ class Wrappers(object):
         if not distribution_map or 'resources' not in package:
             return arr
 
-        for r in package["resources"]:
-            resource = OrderedDict([('@type', "dcat:Distribution")])
+        for r in package['resources']:
+            resource = OrderedDict([('@type', 'dcat:Distribution')])
 
             for pod_key, json_map in distribution_map.items():
                 value = helpers.strip_if_string(r.get(json_map.get('field'), json_map.get('default')))
@@ -448,10 +444,10 @@ class Wrappers(object):
                     if 'mediaType' not in resource:
                         log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
             else:
-                log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
+                log.warning("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
             striped_resource = OrderedDict(
-                [(x, y) for x, y in resource.items() if y is not None and y != "" and y != []])
+                [(x, y) for x, y in resource.items() if y is not None and y != '' and y != []])
 
             arr += [OrderedDict(striped_resource)]
 
@@ -465,7 +461,7 @@ class Wrappers(object):
         if not 'organization' not in Wrappers.pkg or 'title' not in Wrappers.pkg.get('organization'):
             return None
         org_title = Wrappers.pkg.get('organization').get('title')
-        log.debug("org title: %s", org_title)
+        log.debug('org title: %s', org_title)
 
         code_list = Wrappers._get_bureau_code_list()
 
@@ -474,8 +470,8 @@ class Wrappers(object):
 
         bureau = code_list.get(org_title)
 
-        log.debug("found match: %s", "[{0}:{1}]".format(bureau.get('OMB Agency Code'), bureau.get('OMB Bureau Code')))
-        result = "{0}:{1}".format(bureau.get('OMB Agency Code'), bureau.get('OMB Bureau Code'))
+        log.debug('found match: %s', '[{0}:{1}]'.format(bureau.get('OMB Agency Code'), bureau.get('OMB Bureau Code')))
+        result = '{0}:{1}'.format(bureau.get('OMB Agency Code'), bureau.get('OMB Bureau Code'))
         log.debug("found match: '%s'", result)
         return [result]
 
@@ -483,11 +479,9 @@ class Wrappers(object):
     def _get_bureau_code_list():
         if Wrappers.bureau_code_list:
             return Wrappers.bureau_code_list
-        import json
-        import os
         bc_file = open(
-            os.path.join(os.path.dirname(__file__), "resources", "omb-agency-bureau-treasury-codes.json"),
-            "r"
+            os.path.join(os.path.dirname(__file__), 'resources', 'omb-agency-bureau-treasury-codes.json'),
+            'r'
         )
         code_list = json.load(bc_file)
         Wrappers.bureau_code_list = {}

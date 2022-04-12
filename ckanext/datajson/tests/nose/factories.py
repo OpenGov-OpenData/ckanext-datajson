@@ -1,9 +1,12 @@
 import factory
+
 import ckanext.harvest.model as harvest_model
+
 try:
     from ckan.new_tests.factories import _get_action_user_name
 except ImportError:
     from ckan.tests.factories import _get_action_user_name
+
 from ckan.plugins import toolkit
 
 
@@ -27,7 +30,7 @@ class HarvestSource(factory.Factory):
         try:
             source_dict = toolkit.get_action('harvest_source_show')(
                 context, dict(url=kwargs['url']))
-        except (KeyError, toolkit.ObjectNotFound), e:
+        except (KeyError, toolkit.ObjectNotFound):
             source_dict = toolkit.get_action('harvest_source_create')(
                 context, kwargs)
         if cls._return_type == 'dict':
@@ -35,8 +38,7 @@ class HarvestSource(factory.Factory):
                 extras = [{'key': 'test key', 'value': 'test value'}]
                 source_dict['extras'] = extras
             return source_dict
-        else:
-            return cls.FACTORY_FOR.get(source_dict['id'])
+        return cls.FACTORY_FOR.get(source_dict['id'])
 
 
 class HarvestSourceObj(HarvestSource):
@@ -62,8 +64,7 @@ class HarvestJob(factory.Factory):
             context, kwargs)
         if cls._return_type == 'dict':
             return job_dict
-        else:
-            return cls.FACTORY_FOR.get(job_dict['id'])
+        return cls.FACTORY_FOR.get(job_dict['id'])
 
 
 class HarvestJobObj(HarvestJob):
@@ -92,8 +93,7 @@ class HarvestObject(factory.Factory):
             context, kwargs)
         if cls._return_type == 'dict':
             return job_dict
-        else:
-            return cls.FACTORY_FOR.get(job_dict['id'])
+        return cls.FACTORY_FOR.get(job_dict['id'])
 
 
 class HarvestObjectObj(HarvestObject):

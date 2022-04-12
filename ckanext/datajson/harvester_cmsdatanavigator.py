@@ -1,34 +1,33 @@
 from __future__ import division
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from past.utils import old_div
-from ckanext.datajson.harvester_base import DatasetHarvesterBase
 
-import urllib.request
-import urllib.error
-import urllib.parse
-import json
-import re
+import requests
+from future import standard_library
+
+standard_library.install_aliases()
+
 import datetime
+import re
+from past.utils import old_div
+
+from ckanext.datajson.harvester_base import DatasetHarvesterBase
 
 
 class CmsDataNavigatorHarvester(DatasetHarvesterBase):
-    '''
+    """
     A Harvester for the CMS Data Navigator catalog.
-    '''
+    """
 
     HARVESTER_VERSION = "0.9al"  # increment to force an update even if nothing has changed
 
     def info(self):
         return {
-            'name': 'cms-data-navigator',
-            'title': 'CMS Data Navigator',
-            'description': 'Harvests CMS Data Navigator-style catalogs.',
+            "name": "cms-data-navigator",
+            "title": "CMS Data Navigator",
+            "description": "Harvests CMS Data Navigator-style catalogs.",
         }
 
     def load_remote_catalog(self, harvest_job):
-        catalog = json.load(urllib.request.urlopen(harvest_job.source.url))
+        catalog = requests.get(harvest_job.source.url).json()
         for item in catalog:
             item["identifier"] = item["ID"]
             item["title"] = item["Name"].strip()
@@ -54,7 +53,7 @@ class CmsDataNavigatorHarvester(DatasetHarvesterBase):
         extra(package, "Coverage Period", dataset_hd.get("Coverage Period"))
         extra(package, "Collection Frequency", dataset_hd.get("Collection Frequency"))
         extra(package, "Geographic Scope", dataset_hd.get("GeographicScope"))
-        # 'X or Y' syntax returns Y if X is either None or the empty string
+        # "X or Y" syntax returns Y if X is either None or the empty string
         extra(package, "Contact Name", dataset_hd.get("GenericContactName", None) or dataset_hd.get("ContactName"))
         extra(package, "Contact Email", dataset_hd.get("GenericContactEmail", None) or dataset_hd.get("ContactEmail"))
         extra(package, "License Agreement", dataset_hd.get("DataLicenseAgreementURL"))

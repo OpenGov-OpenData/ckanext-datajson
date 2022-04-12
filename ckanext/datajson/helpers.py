@@ -1,19 +1,23 @@
-from builtins import str
-from builtins import map
-from builtins import range
-from builtins import object
+import logging
+import os
+import re
+import sys
+from functools import partial
+
+import six
+from builtins import map, object, range, str
+
+import simplejson as json
+from ckan import plugins as p
+from ckan.lib import helpers as h
+from ckan.plugins.toolkit import config
+from jsonschema import Draft4Validator, FormatChecker
+
 try:
     from collections import OrderedDict  # 2.7
 except ImportError:
     from sqlalchemy.util import OrderedDict
 
-import logging
-
-from ckan.plugins.toolkit import config
-from ckan import plugins as p
-from ckan.lib import helpers as h
-import re
-import simplejson as json
 
 REDACTED_REGEX = re.compile(
     r'^(\[\[REDACTED).*?(\]\])$'
@@ -31,20 +35,20 @@ log = logging.getLogger(__name__)
 
 
 def get_reference_date(date_str):
-    """
+    '''
         Gets a reference date extra created by the harvesters and formats it
         nicely for the UI.
 
         Examples:
-            [{"type": "creation", "value": "1977"}, {"type": "revision", "value": "1981-05-15"}]
-            [{"type": "publication", "value": "1977"}]
-            [{"type": "publication", "value": "NaN-NaN-NaN"}]
+            [{'type': 'creation', 'value': '1977'}, {'type': 'revision', 'value': '1981-05-15'}]
+            [{'type': 'publication', 'value': '1977'}]
+            [{'type': 'publication', 'value': 'NaN-NaN-NaN'}]
 
         Results
             1977 (creation), May 15, 1981 (revision)
             1977 (publication)
             NaN-NaN-NaN (publication)
-    """
+    '''
     try:
         out = []
         for date in h.json.loads(date_str):
@@ -56,19 +60,19 @@ def get_reference_date(date_str):
 
 
 def get_responsible_party(value):
-    """
+    '''
         Gets a responsible party extra created by the harvesters and formats it
         nicely for the UI.
 
         Examples:
-            [{"name": "Complex Systems Research Center", "roles": ["pointOfContact"]}]
-            [{"name": "British Geological Survey", "roles": ["custodian", "pointOfContact"]},
-             {"name": "Natural England", "roles": ["publisher"]}]
+            [{'name': 'Complex Systems Research Center', 'roles': ['pointOfContact']}]
+            [{'name': 'British Geological Survey', 'roles': ['custodian', 'pointOfContact']},
+             {'name': 'Natural England', 'roles': ['publisher']}]
 
         Results
             Complex Systems Research Center (pointOfContact)
             British Geological Survey (custodian, pointOfContact); Natural England (publisher)
-    """
+    '''
     if not value:
         return None
 
@@ -92,19 +96,19 @@ def get_responsible_party(value):
 
 
 def get_common_map_config():
-    """
+    '''
         Returns a dict with all configuration options related to the common
         base map (ie those starting with 'ckanext.spatial.common_map.')
-    """
+    '''
     namespace = 'ckanext.spatial.common_map.'
-    return dict([(k.replace(namespace, ''), v) for k, v in config.items() if k.startswith(namespace)])
+    return {k.replace(namespace, ''): v for k, v in config.items() if k.startswith(namespace)}
 
 
 def strip_if_string(val):
-    """
+    '''
     :param val: any
     :return: str|None
-    """
+    '''
     if isinstance(val, str):
         val = val.strip()
         if '' == val:
@@ -113,18 +117,15 @@ def strip_if_string(val):
 
 
 def get_export_map_json():
-    """
+    '''
     Reading json export map from file
     :param map_filename: str
     :return: obj
-    """
-    import os
-
-    map_filename = config.get("ckanext.datajson.export_map_filename", "export.map.json")
+    '''
     map_path = os.path.join(os.path.dirname(__file__), 'export_map', map_filename)
 
     if not os.path.isfile(map_path):
-        log.warn("Could not find %s ! Please create it. Use samples from same folder", map_path)
+        log.warn('Could not find %s ! Please create it. Use samples from same folder', map_path)
         map_path = os.path.join(os.path.dirname(__file__), 'export_map', 'export.catalog.map.sample.json')
 
     with open(map_path, 'r') as export_map_json:
@@ -134,11 +135,11 @@ def get_export_map_json():
 
 
 def detect_publisher(extras):
-    """
+    '''
     Detect publisher by package extras
     :param extras: dict
     :return: str
-    """
+    '''
     publisher = None
 
     if 'publisher' in extras and extras['publisher']:
@@ -152,44 +153,45 @@ def detect_publisher(extras):
 
 
 def is_redacted(value):
-    """
+    '''
     Checks if value is valid POD v1.1 [REDACTED-*]
     :param value: str
     :return: bool
-    """
+    '''
     return isinstance(value, str) and REDACTED_REGEX.match(value)
 
 
-def get_validator(schema_type="federal-v1.1"):
-    """
+def get_validator(schema_type='federal-v1.1'):
+    '''
     Get POD json validator object
     :param schema_type: str
     :return: obj
-    """
-    import os
-    from jsonschema import Draft4Validator, FormatChecker
-
+    '''
     schema_path = os.path.join(os.path.dirname(__file__), 'pod_schema', schema_type, 'dataset.json')
-    with open(schema_path, 'r') as schema:
+    if six.PY3:
+        c_open = partial(open, encoding='utf8')
+    else:
+        c_open = open
+    with c_open(schema_path, 'r') as schema:
         schema = json.loads(schema.read())
         return Draft4Validator(schema, format_checker=FormatChecker())
 
 
 def uglify(key):
-    """
+    '''
     lower string and remove spaces
     :param key: string
     :return: string
-    """
+    '''
     if isinstance(key, str):
-        return "".join(key.lower().split()).replace('_', '').replace('-', '')
+        return ''.join(key.lower().split()).replace('_', '').replace('-', '')
     return key
 
 
 def get_extra(package, key, default=None):
-    """
+    '''
     Retrieves the value of an extras field.
-    """
+    '''
     return packageExtraCache.get(package, key, default)
 
 
@@ -200,9 +202,6 @@ class PackageExtraCache(object):
         pass
 
     def store(self, package):
-        import sys
-        import os
-
         try:
             self.pid = package.get('id')
 
@@ -213,19 +212,19 @@ class PackageExtraCache(object):
                     rolledup_extras = json.loads(extra.get('value'))
                     for k, value in rolledup_extras.items():
                         if isinstance(value, (list, tuple)):
-                            value = ", ".join(map(str, value))
+                            value = ', '.join(map(str, value))
                         new_extras[uglify(k)] = value
                 else:
                     value = extra.get('value')
                     if isinstance(value, (list, tuple)):
-                        value = ", ".join(map(str, value))
+                        value = ', '.join(map(str, value))
                     new_extras[uglify(extra['key'])] = value
 
             self.extras = new_extras
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            log.error("%s : %s : %s : %s", exc_type, filename, exc_tb.tb_lineno, str(e))
+            log.error('%s : %s : %s : %s', exc_type, filename, exc_tb.tb_lineno, str(e))
             raise e
 
     def get(self, package, key, default=None):

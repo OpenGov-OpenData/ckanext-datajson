@@ -2,15 +2,14 @@ from __future__ import print_function
 
 import json
 import logging
-import os
-import SimpleHTTPServer
-import SocketServer
 from threading import Thread
 
 import pkg_resources
-from ckanext import datajson
+import SimpleHTTPServer
+import SocketServer
 
 log = logging.getLogger("harvester")
+
 
 class MockDataJSONHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def do_GET(self):

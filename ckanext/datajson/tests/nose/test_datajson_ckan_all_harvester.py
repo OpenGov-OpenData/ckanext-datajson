@@ -1,21 +1,22 @@
 import json
 import logging
-from urllib2 import HTTPError, URLError
 
-import ckanext.harvest.model as harvest_model
 import mock_datajson_source
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
-from ckanext.datajson.harvester_datajson import DataJsonHarvester
 from factories import HarvestJobObj, HarvestSourceObj
 from nose.tools import assert_equal, assert_in, assert_raises
+from urllib2 import HTTPError, URLError
+
+import ckanext.harvest.model as harvest_model
+from ckanext.datajson.harvester_datajson import DataJsonHarvester
 
 try:
-    from ckan.tests.helpers import reset_db
     from ckan.tests.factories import Sysadmin
+    from ckan.tests.helpers import reset_db
 except ImportError:
-    from ckan.new_tests.helpers import reset_db
     from ckan.new_tests.factories import Sysadmin
+    from ckan.new_tests.helpers import reset_db
 
 log = logging.getLogger(__name__)
 
@@ -92,13 +93,14 @@ class TestDataJSONHarvester(object):
             log.info('result 2=%s', result)
 
             if not result:
-                log.error('Dataset not imported: {}. Errors: {}. Content: {}'.format(harvest_object.package_id, harvest_object.errors, harvest_object.content))
+                log.error('Dataset not imported: {}. Errors: {}. Content: {}'.format(
+                    harvest_object.package_id, harvest_object.errors, harvest_object.content))
 
             if len(harvest_object.errors) > 0:
                 self.errors = harvest_object.errors
-                harvest_object.state = "ERROR"
+                harvest_object.state = 'ERROR'
 
-            harvest_object.state = "COMPLETE"
+            harvest_object.state = 'COMPLETE'
             harvest_object.save()
 
             log.info('ho pkg id=%s', harvest_object.package_id)
@@ -121,29 +123,29 @@ class TestDataJSONHarvester(object):
         datasets = self.run_source(url=url)
         dataset = datasets[0]
         # assert_equal(first element on list
-        expected_title = "NCEP GFS: vertical profiles of met quantities at standard pressures, at Barrow"
+        expected_title = 'NCEP GFS: vertical profiles of met quantities at standard pressures, at Barrow'
         assert_equal(dataset.title, expected_title)
         tags = [tag.name for tag in dataset.get_tags()]
-        assert_in(munge_title_to_name("ORNL"), tags)
+        assert_in(munge_title_to_name('ORNL'), tags)
         assert_equal(len(dataset.resources), 1)
 
     def test_datason_usda(self):
         url = 'http://127.0.0.1:%s/usda' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
-        expected_title = "Department of Agriculture Congressional Logs for Fiscal Year 2014"
+        expected_title = 'Department of Agriculture Congressional Logs for Fiscal Year 2014'
         assert_equal(dataset.title, expected_title)
         tags = [tag.name for tag in dataset.get_tags()]
         assert_equal(len(dataset.resources), 1)
-        assert_in(munge_title_to_name("Congressional Logs"), tags)
+        assert_in(munge_title_to_name('Congressional Logs'), tags)
 
     def test_source_returning_http_error(self):
         url = 'http://127.0.0.1:%s/404' % self.mock_port
         self.run_source(url)
 
         assert_raises(HTTPError)
-        assert_equal(self.job.gather_errors[0].message, "HTTP Error getting json source: HTTP Error 404: Not Found.")
-        assert_equal(self.job.gather_errors[1].message, "Error loading json content: need more than 0 values to unpack.")
+        assert_equal(self.job.gather_errors[0].message, 'HTTP Error getting json source: HTTP Error 404: Not Found.')
+        assert_equal(self.job.gather_errors[1].message, 'Error loading json content: need more than 0 values to unpack.')
 
     def test_source_returning_url_error(self):
         # URL failing SSL
@@ -151,8 +153,8 @@ class TestDataJSONHarvester(object):
         self.run_source(url)
 
         assert_raises(URLError)
-        assert_in("URL Error getting json source: <urlopen error", self.job.gather_errors[0].message)
-        assert_equal(self.job.gather_errors[1].message, "Error loading json content: need more than 0 values to unpack.")
+        assert_in('URL Error getting json source: <urlopen error', self.job.gather_errors[0].message)
+        assert_equal(self.job.gather_errors[1].message, 'Error loading json content: need more than 0 values to unpack.')
 
     def get_datasets_from_2_collection(self):
         url = 'http://127.0.0.1:%s/collection-2-parent-4-children.data.json' % self.mock_port
@@ -162,7 +164,7 @@ class TestDataJSONHarvester(object):
         return datasets
 
     def fix_extras(self, extras):
-        """ fix extras rolled up at geodatagov """
+        ''' fix extras rolled up at geodatagov '''
         new_extras = {}
         for e in extras:
             k = e[0]
@@ -177,7 +179,7 @@ class TestDataJSONHarvester(object):
         return new_extras
 
     def test_harvesting_parent_child_2_collections(self):
-        """ Test that we have the right parents in each case """
+        ''' Test that we have the right parents in each case '''
 
         datasets = self.get_datasets_from_2_collection()
 
@@ -197,25 +199,25 @@ class TestDataJSONHarvester(object):
         url = 'http://127.0.0.1:%s/error-reserved-title' % self.mock_port
         self.run_source(url=url)
         errors = self.errors
-        expected_error_stage = "Import"
+        expected_error_stage = 'Import'
         assert_equal(errors[0].stage, expected_error_stage)
-        expected_error_message = "title: Search. That name cannot be used."
+        expected_error_message = 'title: Search. That name cannot be used.'
         assert_equal(errors[0].message, expected_error_message)
 
     def test_datajson_large_spatial(self):
         url = 'http://127.0.0.1:%s/error-large-spatial' % self.mock_port
         self.run_source(url=url)
         errors = self.errors
-        expected_error_stage = "Import"
+        expected_error_stage = 'Import'
         assert_equal(errors[0].stage, expected_error_stage)
-        expected_error_message = "spatial: Maximum allowed size is 32766. Actual size is 309643."
+        expected_error_message = 'spatial: Maximum allowed size is 32766. Actual size is 309643.'
         assert_equal(errors[0].message, expected_error_message)
 
     def test_datajson_null_spatial(self):
         url = 'http://127.0.0.1:%s/null-spatial' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
-        expected_title = "Sample Title NUll Spatial"
+        expected_title = 'Sample Title NUll Spatial'
         assert_equal(dataset.title, expected_title)
 
     def test_datason_404(self):
