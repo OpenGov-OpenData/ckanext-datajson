@@ -12,10 +12,6 @@ from ckan.plugins import toolkit
 
 class HarvestSource(factory.Factory):
     FACTORY_FOR = harvest_model.HarvestSource
-
-    class Meta:
-        model = harvest_model.HarvestSource
-
     _return_type = 'dict'
 
     name = factory.Sequence(lambda n: 'test_source_{n}'.format(n=n))
@@ -51,10 +47,6 @@ class HarvestSourceObj(HarvestSource):
 
 class HarvestJob(factory.Factory):
     FACTORY_FOR = harvest_model.HarvestJob
-
-    class Meta:
-        model = harvest_model.HarvestJob
-
     _return_type = 'dict'
 
     source = factory.SubFactory(HarvestSourceObj)
@@ -81,10 +73,6 @@ class HarvestJobObj(HarvestJob):
 
 class HarvestObject(factory.Factory):
     FACTORY_FOR = harvest_model.HarvestObject
-
-    class Meta:
-        model = harvest_model.HarvestObject
-
     _return_type = 'dict'
 
     # source = factory.SubFactory(HarvestSourceObj)

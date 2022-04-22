@@ -1,20 +1,17 @@
 from __future__ import print_function
 
-from future import standard_library
-
-standard_library.install_aliases()
-import http.server
 import json
 import logging
-import socketserver
 from threading import Thread
 
 import pkg_resources
+import SimpleHTTPServer
+import SocketServer
 
 log = logging.getLogger("harvester")
 
 
-class MockDataJSONHandler(http.server.SimpleHTTPRequestHandler):
+class MockDataJSONHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def do_GET(self):
         log.info('GET mock at: {}'.format(self.path))
         # test name is the first bit of the URL and makes CKAN behave
@@ -76,7 +73,7 @@ class MockDataJSONHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header('Content-Type', content_type)
         self.end_headers()
-        self.wfile.write(content.encode('utf-8'))
+        self.wfile.write(content)
         self.wfile.close()
 
 
@@ -87,7 +84,7 @@ def serve(port=8998):
     # os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)),
     #                      'mock_ckan_files'))
 
-    class TestServer(socketserver.TCPServer):
+    class TestServer(SocketServer.TCPServer):
         allow_reuse_address = True
 
     httpd = TestServer(("", port), MockDataJSONHandler)
