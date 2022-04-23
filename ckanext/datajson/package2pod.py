@@ -470,11 +470,9 @@ class Wrappers(object):
             if res_url:
                 res_url = res_url.replace('http://[[REDACTED', '[[REDACTED')
                 res_url = res_url.replace('http://http', 'http')
-                if (
-                    r.get('resource_type') in ['api', 'accessurl']
-                    or r.get('format', '').lower() in accessurl_formats
-                    or not r.get('format')
-                ):
+                if r.get('resource_type') in ['api', 'accessurl'] \
+                        or r.get('format', '').lower() in accessurl_formats \
+                        or not r.get('format'):
                     resource['accessURL'] = res_url
                     if 'mediaType' in resource:
                         resource.pop('mediaType')

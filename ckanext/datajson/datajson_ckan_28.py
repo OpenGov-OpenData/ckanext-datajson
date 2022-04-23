@@ -2,7 +2,6 @@ from functools import partial
 
 import six
 from future import standard_library
-
 standard_library.install_aliases()
 import hashlib
 import json

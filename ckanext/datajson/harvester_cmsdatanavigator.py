@@ -2,7 +2,6 @@ from __future__ import division
 
 import requests
 from future import standard_library
-
 standard_library.install_aliases()
 
 import datetime

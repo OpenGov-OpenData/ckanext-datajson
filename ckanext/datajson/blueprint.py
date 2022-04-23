@@ -111,7 +111,7 @@ def generate_output(fmt='json', org_id=None):
     #         ("@context", OrderedDict([
     #             ("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
     #             ("dcterms", "http://purl.org/dc/terms/"),
-    #             ("dcat', "http://www.w3.org/ns/dcat#"),
+    #             ("dcat", "http://www.w3.org/ns/dcat#"),
     #             ("foaf", "http://xmlns.com/foaf/0.1/"),
     #         ])),
     #         ("@id", DataJsonPlugin.ld_id),
@@ -145,17 +145,17 @@ def make_json(export_type='datajson', owner_org=None):
             if 'datajson' == export_type:
                 # we didn't check ownership for this type of export, so never load private datasets here
                 packages = _get_ckan_datasets(org=owner_org)
-                # commented out since we paginate the results. With these lines the last page will return all datasets.
+                # commented out since we paginate the results, otherwise the last page will return all datasets.
                 # if not packages:
                 #     packages = get_packages(owner_org=owner_org, with_private=False)
             else:
                 packages = get_packages(owner_org=owner_org, with_private=True)
         else:
             # TODO: load data by pages
-            # packages = p.toolkit.get_action('current_package_list_with_resources)(
+            # packages = p.toolkit.get_action('current_package_list_with_resources')(
             # None, {'limit': 50, 'page': 300})
             packages = _get_ckan_datasets()
-            # packages = p.toolkit.get_action("current_package_list_with_resources")(None, {})
+            # packages = p.toolkit.get_action('current_package_list_with_resources')(None, {})
 
         json_export_map = get_export_map_json()
 
@@ -376,12 +376,13 @@ def validator():
 
 
 def _get_ckan_datasets(org=None, with_private=False):
+    # Query using package_search (n) datasets at a time
     n = 500
     page = int(request.params.get('page', 1))
     dataset_list = []
 
-    # For now return at most 4000 datasets
-    max_result = 4000
+    # Set max number of results returned per page
+    max_result = 5000
     start = max_result * (page - 1)
 
     q = '+capacity:public' if not with_private else '*:*'
@@ -390,7 +391,7 @@ def _get_ckan_datasets(org=None, with_private=False):
     if org:
         fq += ' AND organization:' + org
 
-    for x in range(max_result/n):
+    for x in range(int(max_result / n)):
         search_data_dict = {
             'q': q,
             'fq': fq,
