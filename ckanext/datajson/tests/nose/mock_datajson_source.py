@@ -2,14 +2,13 @@ from __future__ import print_function
 
 import json
 import logging
+import SimpleHTTPServer
+import SocketServer
 from threading import Thread
 
 import pkg_resources
-import SimpleHTTPServer
-import SocketServer
 
 log = logging.getLogger("harvester")
-
 
 class MockDataJSONHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def do_GET(self):

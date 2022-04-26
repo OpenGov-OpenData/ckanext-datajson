@@ -1,23 +1,21 @@
-import logging
-import os
-import re
-import sys
-from functools import partial
-
-import six
 from builtins import map, object, range, str
-
-import simplejson as json
-from ckan import plugins as p
-from ckan.lib import helpers as h
-from ckan.plugins.toolkit import config
-from jsonschema import Draft4Validator, FormatChecker
-
 try:
     from collections import OrderedDict  # 2.7
 except ImportError:
     from sqlalchemy.util import OrderedDict
 
+import logging
+
+from ckan.plugins.toolkit import config
+from ckan import plugins as p
+from ckan.lib import helpers as h
+import os
+import re
+import six
+import sys
+import simplejson as json
+from functools import partial
+from jsonschema import Draft4Validator, FormatChecker
 
 REDACTED_REGEX = re.compile(
     r'^(\[\[REDACTED).*?(\]\])$'
@@ -122,7 +120,7 @@ def get_export_map_json():
     :param map_filename: str
     :return: obj
     '''
-    map_filename = config.get("ckanext.datajson.map_filename", "export.map.json")
+    map_filename = config.get("ckanext.datajson.export_map_filename", "export.map.json")
     map_path = os.path.join(os.path.dirname(__file__), 'export_map', map_filename)
 
     if not os.path.isfile(map_path):

@@ -1,34 +1,33 @@
-from functools import partial
-
-import six
 from future import standard_library
 standard_library.install_aliases()
-import hashlib
-import json
-import logging
-import os
-import uuid
 from builtins import str, zip
-
-import yaml
 from ckan import model
 from ckan import plugins as p
-from ckan.lib.munge import munge_title_to_name
-from ckan.lib.navl.dictization_functions import DataError, Invalid
-from ckan.lib.navl.validators import ignore_empty
-from ckan.lib.search import rebuild
+from ckan.model import Session, Package
 from ckan.logic import NotFound, get_action
 from ckan.logic.validators import name_validator
-from ckan.model import Package, Session
-from jsonschema import FormatChecker
+from ckan.lib.munge import munge_title_to_name
+from ckan.lib.navl.dictization_functions import Invalid, DataError
+from ckan.lib.navl.validators import ignore_empty
+from ckan.lib.search import rebuild
+
+from ckanext.harvest.model import HarvestObject, HarvestObjectError, HarvestObjectExtra
+from ckanext.harvest.harvesters.base import HarvesterBase
+from ckanext.datajson.exceptions import ParentNotHarvestedException
+import hashlib
+import json
+import os
+import six
+import uuid
+import yaml
+from functools import partial
+
 from jsonschema.validators import Draft4Validator
+from jsonschema import FormatChecker
+
 from sqlalchemy.exc import IntegrityError
 
-from ckanext.datajson.exceptions import ParentNotHarvestedException
-from ckanext.harvest.harvesters.base import HarvesterBase
-from ckanext.harvest.model import (HarvestObject, HarvestObjectError,
-                                   HarvestObjectExtra)
-
+import logging
 log = logging.getLogger(__name__)
 
 # watch out for these keys that their string values might go beyond Solr capacity
@@ -165,7 +164,8 @@ class DatasetHarvesterBase(HarvesterBase):
             try:
                 pkg = get_action("package_show")(self.context(), {"id": hobj.package_id})
             except Exception:
-                log.debug('Can not get a package %s', hobj.package_id, exc_info=True)
+                # reference is broken
+                log.debug('Package not found %s', hobj.package_id, exc_info=True)
                 continue
             sid = self.find_extra(pkg, "identifier")
             is_parent = self.find_extra(pkg, "collection_metadata")

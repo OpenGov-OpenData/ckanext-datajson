@@ -1,20 +1,19 @@
 from __future__ import division
-
+from __future__ import print_function
 import requests
 from future import standard_library
 standard_library.install_aliases()
-
-import datetime
-import re
 from past.utils import old_div
-
 from ckanext.datajson.harvester_base import DatasetHarvesterBase
+
+import re
+import datetime
 
 
 class CmsDataNavigatorHarvester(DatasetHarvesterBase):
-    """
+    '''
     A Harvester for the CMS Data Navigator catalog.
-    """
+    '''
 
     HARVESTER_VERSION = "0.9al"  # increment to force an update even if nothing has changed
 
@@ -52,7 +51,7 @@ class CmsDataNavigatorHarvester(DatasetHarvesterBase):
         extra(package, "Coverage Period", dataset_hd.get("Coverage Period"))
         extra(package, "Collection Frequency", dataset_hd.get("Collection Frequency"))
         extra(package, "Geographic Scope", dataset_hd.get("GeographicScope"))
-        # "X or Y" syntax returns Y if X is either None or the empty string
+        # 'X or Y' syntax returns Y if X is either None or the empty string
         extra(package, "Contact Name", dataset_hd.get("GenericContactName", None) or dataset_hd.get("ContactName"))
         extra(package, "Contact Email", dataset_hd.get("GenericContactEmail", None) or dataset_hd.get("ContactEmail"))
         extra(package, "License Agreement", dataset_hd.get("DataLicenseAgreementURL"))

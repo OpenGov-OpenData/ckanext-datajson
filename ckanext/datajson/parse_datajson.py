@@ -1,5 +1,7 @@
 from ckan.lib.munge import munge_title_to_name
 
+import re
+
 
 def parse_datajson_entry(datajson, package, defaults, schema_version):
     # four fields need extra handling, which are
@@ -49,14 +51,14 @@ def parse_datajson_entry(datajson, package, defaults, schema_version):
         "www.nationalarchives.gov.uk/doc/open-government-licence/version/3": "uk-ogl"
     }
 
-    datajson_license = datajson.get("license")
-    if not datajson_license:
+    license = datajson.get("license")
+    if not license:
         package["license_id"] = licenses.get("License Not Specified", "")
     else:
-        datajson_license = datajson_license.replace("http://", "")
-        datajson_license = datajson_license.replace("https://", "")
-        datajson_license = datajson_license.rstrip("/")
-        package["license_id"] = licenses.get(datajson_license, "other-license-specified")
+        license = license.replace("http://", "")
+        license = license.replace("https://", "")
+        license = license.rstrip('/')
+        package["license_id"] = licenses.get(license, "other-license-specified")
 
     # 3. package["maintainer_email"]
     if package.get("maintainer_email"):
@@ -145,9 +147,9 @@ def extra(package, key, value):
 
 
 def find_extra(pkg, key, default):
-    for line in pkg["extras"]:
-        if line["key"] == key:
-            ret = line["value"]
+    for extra in pkg["extras"]:
+        if extra["key"] == key:
+            ret = extra["value"]
             break
     else:
         ret = default
@@ -156,9 +158,34 @@ def find_extra(pkg, key, default):
 
 
 def set_extra(pkg, key, value):
-    for line in pkg["extras"]:
-        if line["key"] == key:
-            line["value"] = value
+    for extra in pkg["extras"]:
+        if extra["key"] == key:
+            extra["value"] = value
             break
     else:
         pkg["extras"].append({"key": key, "value": value})
+
+
+def normalize_format(format, raise_on_unknown=False):
+    if format is None:
+        return
+    # Format should be a file extension. But sometimes Socrata outputs a MIME type.
+    format = format.lower()
+    m = re.match(r"((application|text)/(\S+))(; charset=.*)?", format)
+    if m:
+        if m.group(1) == "text/plain":
+            return "Text"
+        if m.group(1) == "application/zip":
+            return "ZIP"
+        if m.group(1) == "application/vnd.ms-excel":
+            return "XLS"
+        if m.group(1) == "application/x-msaccess":
+            return "Access"
+        if raise_on_unknown:
+            raise ValueError()    # caught & ignored by caller
+        return "Other"
+    if format == "text":
+        return "Text"
+    if raise_on_unknown and "?" in format:
+        raise ValueError()    # weird value we should try to filter out; exception is caught & ignored by caller
+    return format.upper()    # hope it's one of our formats by converting to upprecase

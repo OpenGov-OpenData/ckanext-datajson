@@ -1,10 +1,9 @@
 from future import standard_library
 standard_library.install_aliases()
+from builtins import str
 import csv
 import os
 import re
-from builtins import str
-
 import rfc3987 as rfc3987_url
 
 # from the iso8601 package, plus ^ and $ on the edges

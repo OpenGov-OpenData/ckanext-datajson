@@ -1,26 +1,24 @@
 from __future__ import absolute_import
-
 from future import standard_library
-
 standard_library.install_aliases()
-import json
-import logging
 from builtins import object
 from datetime import datetime
+import json
+import logging
+import six
+
+import pytest
+
 from requests.exceptions import InvalidURL, SSLError
 
 import ckan.plugins as p
-import pytest
-import six
-from ckan import model
-from ckan.lib.munge import munge_title_to_name
-from mock import Mock, patch
-
 import ckanext.harvest.model as harvest_model
 import ckanext.harvest.queue as queue
+from ckan import model
+from ckan.lib.munge import munge_title_to_name
 from ckanext.datajson.exceptions import ParentNotHarvestedException
 from ckanext.datajson.harvester_datajson import DataJsonHarvester
-
+from mock import Mock, patch
 from . import mock_datajson_source
 from .factories import HarvestJobObj, HarvestSourceObj
 

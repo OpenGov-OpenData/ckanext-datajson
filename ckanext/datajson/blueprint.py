@@ -1,24 +1,24 @@
 
+from builtins import str
 import io
 import json
 import logging
-import os
-import sys
-import zipfile
-from builtins import str
-
-import ckan.plugins as p
 import requests
 import six
-from ckan import model
-from ckan.common import c
-from ckan.lib.dictization import model_dictize
-from ckan.plugins.toolkit import render, request
-from flask import Blueprint
-from flask.wrappers import Response
-from jsonschema.exceptions import best_match
+import sys
+import zipfile
 
-from .helpers import detect_publisher, get_export_map_json, get_validator
+from ckan.common import c
+import ckan.lib.dictization.model_dictize as model_dictize
+import ckan.model as model
+import ckan.plugins as p
+from ckan.plugins.toolkit import render, request
+from flask.wrappers import Response
+from flask import Blueprint
+from jsonschema.exceptions import best_match
+import os
+
+from .helpers import get_export_map_json, detect_publisher, get_validator
 from .package2pod import Package2Pod
 
 
@@ -376,7 +376,9 @@ def validator():
 
 
 def _get_ckan_datasets(org=None, with_private=False):
-    # Query using package_search (n) datasets at a time
+    '''
+    Gets CKAN datasets with pagination for a max 5000 datasets per page
+    '''
     n = 500
     page = int(request.params.get('page', 1))
     dataset_list = []
@@ -391,6 +393,7 @@ def _get_ckan_datasets(org=None, with_private=False):
     if org:
         fq += ' AND organization:' + org
 
+    # Get 500 datasets at a time until we reach 5000 or there are no more
     for x in range(int(max_result / n)):
         search_data_dict = {
             'q': q,

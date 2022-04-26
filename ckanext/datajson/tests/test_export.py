@@ -2,13 +2,13 @@ from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
 import json
+import six
 import zipfile
 
-import six
+import ckanext.harvest.model as harvest_model
 from ckan.tests import factories
 from ckan.tests.helpers import reset_db
 
-import ckanext.harvest.model as harvest_model
 
 if six.PY2:
     from ckan.tests.helpers import FunctionalTestBase

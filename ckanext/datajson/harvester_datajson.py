@@ -1,20 +1,16 @@
 from __future__ import absolute_import
-
 import requests
-from future import standard_library
 from requests.exceptions import InvalidURL, HTTPError, SSLError
-
+from future import standard_library
 standard_library.install_aliases()
-
 from ckanext.datajson.harvester_base import DatasetHarvesterBase
-
 from .parse_datajson import parse_datajson_entry
 
 
 class DataJsonHarvester(DatasetHarvesterBase):
-    """
+    '''
     A Harvester for /data.json files.
-    """
+    '''
 
     HARVESTER_VERSION = "0.9al"  # increment to force an update even if nothing has changed
 
@@ -45,7 +41,7 @@ class DataJsonHarvester(DatasetHarvesterBase):
                 datasets = response.json(encoding="iso-8859-1")
 
         # The first dataset should be for the data.json file itself. Check that
-        # it is, and if so rewrite the dataset"s title because Socrata exports
+        # it is, and if so rewrite the dataset's title because Socrata exports
         # these items all with the same generic name that is confusing when
         # harvesting a bunch from different sources. It should have an accessURL
         # but Socrata fills the URL of these in under webService.
@@ -61,7 +57,7 @@ class DataJsonHarvester(DatasetHarvesterBase):
             catalog_values = datasets.copy()
             datasets = catalog_values.pop("dataset", [])
 
-        return datasets, catalog_values
+        return (datasets, catalog_values)
 
     def set_dataset_info(self, pkg, dataset, dataset_defaults, schema_version):
         parse_datajson_entry(dataset, pkg, dataset_defaults, schema_version)
