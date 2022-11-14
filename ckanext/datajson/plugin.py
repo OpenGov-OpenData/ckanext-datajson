@@ -88,9 +88,11 @@ class DataJsonPlugin(p.SingletonPlugin):
             m.connect('enterprise_data_inventory', '/organization/{org_id}/draft.json',
                       controller='ckanext.datajson.plugin:DataJsonController', action='generate_draft')
 
+        # SSRF vulnerability is present in this endpoint.
+        # Disabled as a part of https://opengovinc.atlassian.net/browse/OD-1991.
         # /pod/validate
-        m.connect('datajsonvalidator', "/pod/validate",
-                  controller='ckanext.datajson.plugin:DataJsonController', action='validator')
+        # m.connect('datajsonvalidator', "/pod/validate",
+        #           controller='ckanext.datajson.plugin:DataJsonController', action='validator')
 
         return m
 
