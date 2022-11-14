@@ -422,5 +422,7 @@ datapusher.add_url_rule('/organization/<org_id>/unredacted.json',
                         view_func=generate_unredacted)
 datapusher.add_url_rule('/organization/<org_id>/draft.json',
                         view_func=generate_draft)
-datapusher.add_url_rule('/pod/validate',
-                        view_func=validator)
+# SSRF vulnerability is present in this endpoint.
+# Disabled as a part of https://opengovinc.atlassian.net/browse/OD-1991.
+# datapusher.add_url_rule('/pod/validate',
+#                         view_func=validator)
