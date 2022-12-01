@@ -417,7 +417,7 @@ class DataJsonController(BaseController):
         page = int(request.params.get('page', 1))
         dataset_list = []
 
-        # Temporarily return 5000 datasets
+        # Return 5000 datasets and offset by page
         max_result = 5000
         start = max_result * (page - 1)
 
@@ -427,6 +427,8 @@ class DataJsonController(BaseController):
         if org:
             fq += " AND organization:" + org
 
+        # Call package_search, getting n datasets at a time, until either
+        # max_result is reached or there are no more datasets.
         for x in range(max_result/n):
             search_data_dict = {
                 'q': q,
