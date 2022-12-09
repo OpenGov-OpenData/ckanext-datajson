@@ -142,7 +142,13 @@ class Package2Pod:
                     method = getattr(Wrappers, wrapper)
                     if method:
                         Wrappers.current_field_map = field_map
-                        dataset[key] = method(dataset.get(key))
+                        try:
+                            dataset[key] = method(dataset.get(key))
+                        except TypeError as err:
+                            log.warning('Error with package %s when exporting field %s: %s', package.get('id'), key, err,
+                                exc_info=sys.exc_info())
+                            continue
+
 
             # CKAN doesn't like empty values on harvest, let's get rid of them
             # Remove entries where value is None, "", or empty list []
@@ -222,8 +228,9 @@ class Wrappers:
         publisher = None
         if value:
             publisher = get_responsible_party(value)
-        if not publisher and 'organization' in Wrappers.pkg and 'title' in Wrappers.pkg.get('organization'):
-            publisher = Wrappers.pkg.get('organization').get('title')
+        if not publisher and Wrappers.pkg.get('organization'):
+            if 'title' in Wrappers.pkg.get('organization'):
+                publisher = Wrappers.pkg.get('organization').get('title')
         return OrderedDict([
             ("@type", "org:Organization"),
             ("name", publisher)
@@ -489,7 +496,7 @@ class Wrappers:
                         resource.pop('accessURL')
                     resource['downloadURL'] = res_url
             else:
-                log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
+                log.debug("Missing downloadURL for resource in package %s", package.get('id'))
                 continue
 
             striped_resource = OrderedDict(

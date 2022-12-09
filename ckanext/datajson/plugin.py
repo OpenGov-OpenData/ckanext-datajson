@@ -415,7 +415,7 @@ class DataJsonController(BaseController):
 
     @staticmethod
     def _get_ckan_datasets(org=None, with_private=False):
-        n = 500
+        n = 1000
         page = int(request.params.get('page', 1))
         dataset_list = []
 
