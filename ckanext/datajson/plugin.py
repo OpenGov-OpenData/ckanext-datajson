@@ -419,8 +419,8 @@ class DataJsonController(BaseController):
         page = int(request.params.get('page', 1))
         dataset_list = []
 
-        # Return 5000 datasets and offset by page
-        max_result = 5000
+        # Return 3000 datasets and offset by page
+        max_result = 3000
         start = max_result * (page - 1)
 
         q = '+capacity:public' if not with_private else '*:*'
