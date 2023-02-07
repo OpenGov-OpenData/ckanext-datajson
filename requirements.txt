@@ -4,7 +4,7 @@ rfc3987
 future
 ckantoolkit>=0.0.7
 pika>=1.1.0
-pyOpenSSL==18.0.0
+pyOpenSSL
 redis
 requests>=2.11.1
 six>=1.12.0
