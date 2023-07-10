@@ -23,7 +23,7 @@ class DataJsonHarvester(DatasetHarvesterBase):
 
     def load_remote_catalog(self, harvest_job):
         try:
-            response = requests.get(harvest_job.source.url, headers={"User-agent": "Data.gov/2.0"})
+            response = requests.get(harvest_job.source.url, headers={"User-agent": "Data.gov/2.0"}, timeout=60)
             response.raise_for_status()
         except HTTPError as e:
             self._save_gather_error("HTTP Error getting json source: %s." % (e), harvest_job)

@@ -354,7 +354,7 @@ def validator():
 
         body = None
         try:
-            body = requests.get(c.source_url).json()
+            body = requests.get(c.source_url, timeout=60).json()
         except IOError as e:
             c.errors.append(('Error Loading File', ['The address could not be loaded: ' + str(e)]))
         except ValueError as e:
