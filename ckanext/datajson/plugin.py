@@ -17,6 +17,7 @@ from package2pod import Package2Pod
 
 logger = logging.getLogger(__name__)
 draft4validator = get_validator()
+is_positive_integer = p.toolkit.get_validator('is_positive_integer')
 
 try:
     from collections import OrderedDict  # 2.7
@@ -416,7 +417,11 @@ class DataJsonController(BaseController):
     @staticmethod
     def _get_ckan_datasets(org=None, with_private=False):
         n = 1000
-        page = int(request.params.get('page', 1))
+        try:
+            page = is_positive_integer(request.params.get('page', 1), {})
+        except p.toolkit.Invalid:
+            return []
+
         dataset_list = []
 
         # Return 3000 datasets and offset by page
