@@ -25,7 +25,7 @@ class CmsDataNavigatorHarvester(DatasetHarvesterBase):
         }
 
     def load_remote_catalog(self, harvest_job):
-        catalog = requests.get(harvest_job.source.url).json()
+        catalog = requests.get(harvest_job.source.url, timeout=60).json()
         for item in catalog:
             item["identifier"] = item["ID"]
             item["title"] = item["Name"].strip()

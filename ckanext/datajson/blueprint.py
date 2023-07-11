@@ -27,6 +27,7 @@ datapusher = Blueprint('datajson', __name__)
 
 logger = logging.getLogger(__name__)
 draft4validator = get_validator()
+is_positive_integer = p.toolkit.get_validator('is_positive_integer')
 _errors_json = []
 _zip_name = ''
 
@@ -353,7 +354,7 @@ def validator():
 
         body = None
         try:
-            body = requests.get(c.source_url).json()
+            body = requests.get(c.source_url, timeout=60).json()
         except IOError as e:
             c.errors.append(('Error Loading File', ['The address could not be loaded: ' + str(e)]))
         except ValueError as e:
@@ -379,8 +380,12 @@ def _get_ckan_datasets(org=None, with_private=False):
     '''
     Gets CKAN datasets with pagination for a max 5000 datasets per page
     '''
-    n = 500
-    page = int(request.params.get('page', 1))
+    n = 1000
+    try:
+        page = is_positive_integer(request.params.get('page', 1), {})
+    except p.toolkit.Invalid:
+        return []
+
     dataset_list = []
 
     # Set max number of results returned per page
@@ -393,7 +398,8 @@ def _get_ckan_datasets(org=None, with_private=False):
     if org:
         fq += ' AND organization:' + org
 
-    # Get 500 datasets at a time until we reach 5000 or there are no more
+    # Call package_search, getting n datasets at a time, until either
+    # max_result is reached or there are no more datasets.
     for x in range(int(max_result / n)):
         search_data_dict = {
             'q': q,
