@@ -424,8 +424,8 @@ class DataJsonController(BaseController):
 
         dataset_list = []
 
-        # Return 3000 datasets and offset by page
-        max_result = 3000
+        # Return 5000 datasets and offset by page
+        max_result = 5000
         start = max_result * (page - 1)
 
         q = '+capacity:public' if not with_private else '*:*'
