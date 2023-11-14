@@ -8,6 +8,7 @@ except ImportError:
 import ckan.model as model
 from ckan.common import config
 from ckan.lib import helpers as h
+from ckan.plugins.toolkit import get_action
 
 import json
 import os
@@ -482,6 +483,16 @@ class Wrappers(object):
                     resource['downloadURL'] = res_url
             else:
                 log.warning("Missing downloadURL for resource in package ['%s']", package.get('id'))
+
+            if r.get('datastore_active'):
+                data_dict = {
+                    'resource_id': r.get('id'),
+                    'limit': 0
+                }
+                resource_datastore = get_action(u'datastore_search')(None, data_dict)
+                fields = resource_datastore.get('fields')
+                if helpers.is_data_dict_populated(fields):
+                    resource['fields'] = fields
 
             striped_resource = OrderedDict(
                 [(x, y) for x, y in resource.items() if y is not None and y != '' and y != []])
