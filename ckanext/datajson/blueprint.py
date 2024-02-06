@@ -7,6 +7,7 @@ import requests
 import six
 import sys
 import zipfile
+import datetime
 
 from ckan.common import c
 import ckan.lib.dictization.model_dictize as model_dictize
@@ -14,7 +15,7 @@ import ckan.model as model
 import ckan.plugins as p
 from ckan.plugins.toolkit import render, request
 from flask.wrappers import Response
-from flask import Blueprint
+from flask import Blueprint, make_response
 from jsonschema.exceptions import best_match
 import os
 
@@ -30,6 +31,12 @@ draft4validator = get_validator()
 is_positive_integer = p.toolkit.get_validator('is_positive_integer')
 _errors_json = []
 _zip_name = ''
+
+
+def _json_serial(obj):
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    raise TypeError("Unhandled Object")
 
 
 def generate_json():
@@ -95,7 +102,8 @@ def generate_output(fmt='json', org_id=None):
     global _errors_json
     _errors_json = []
     # set content type (charset required or pylons throws an error)
-    Response.content_type = 'application/json; charset=UTF-8'
+    headers = {}
+    headers['Content-Type'] = 'application/json; charset=UTF-8'
 
     # allow caching of response (e.g. by Apache)
     # Commented because it works without it
@@ -122,8 +130,8 @@ def generate_output(fmt='json', org_id=None):
     #         ("foaf:homepage", DataJsonPlugin.site_url),
     #         ("dcat:dataset", [dataset_to_jsonld(d) for d in data.get('dataset')]),
     #     ])
-
-    return p.toolkit.literal(json.dumps(data, indent=2))
+    resp = make_response(json.dumps(data, default=_json_serial), headers)
+    return resp
 
 
 def make_json(export_type='datajson', owner_org=None):
