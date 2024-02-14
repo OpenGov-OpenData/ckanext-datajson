@@ -98,7 +98,7 @@ with open(os.path.join(os.path.dirname(__file__), "resources", "omb_bureau_codes
 def do_validation(doc, errors_array, seen_identifiers):
     errs = {}
 
-    if type(doc) != list:
+    if type(doc) is not list:
         add_error(errs, 0, "Bad JSON Structure",
                   "The file must be an array at its top level. "
                   "That means the file starts with an open bracket [ and ends with a close bracket ].")
