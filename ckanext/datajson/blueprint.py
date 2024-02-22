@@ -7,7 +7,6 @@ import requests
 import six
 import sys
 import zipfile
-import datetime
 
 from ckan.common import c
 import ckan.lib.dictization.model_dictize as model_dictize
@@ -31,12 +30,6 @@ draft4validator = get_validator()
 is_positive_integer = p.toolkit.get_validator('is_positive_integer')
 _errors_json = []
 _zip_name = ''
-
-
-def _json_serial(obj):
-    if isinstance(obj, (datetime.datetime, datetime.date)):
-        return obj.isoformat()
-    raise TypeError("Unhandled Object")
 
 
 def generate_json():
@@ -130,7 +123,7 @@ def generate_output(fmt='json', org_id=None):
     #         ("foaf:homepage", DataJsonPlugin.site_url),
     #         ("dcat:dataset", [dataset_to_jsonld(d) for d in data.get('dataset')]),
     #     ])
-    resp = make_response(json.dumps(data, default=_json_serial), headers)
+    resp = make_response(json.dumps(data), headers)
     return resp
 
 

@@ -194,17 +194,6 @@ def get_extra(package, key, default=None):
     return packageExtraCache.get(package, key, default)
 
 
-def is_data_dict_populated(ddict):
-    '''
-    Returns True if data dictionary is populated
-    '''
-    for col in ddict:
-        info = col.get('info', {})
-        if info.get('label') or info.get('notes'):
-            return True
-    return False
-
-
 class PackageExtraCache(object):
     def __init__(self):
         self.pid = None
