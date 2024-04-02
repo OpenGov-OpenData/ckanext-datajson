@@ -49,8 +49,8 @@
       "field": "program_web_page"
     },
     "license": {
-      "extra": true,
-      "field": "license"
+      "field": "license_url",
+      "wrapper": "get_license"
     },
     "primaryITInvestmentUII": {
       "extra": true,

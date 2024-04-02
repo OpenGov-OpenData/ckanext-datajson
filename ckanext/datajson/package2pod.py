@@ -561,3 +561,11 @@ class Wrappers(object):
             elif catalog_date_field == 'metadata_modified':
                 return dcat_modified
         return date_value
+
+    @staticmethod
+    def get_license(value):
+        if value:
+            return value
+        license_title = Wrappers.pkg.get('license_title')
+        if license_title != 'License not specified':
+            return license_title
