@@ -149,8 +149,7 @@ class Package2Pod(object):
                         try:
                             dataset[key] = method(dataset.get(key))
                         except TypeError as err:
-                            log.warning('Error with package %s when exporting field %s: %s', package.get('id'), key, err,
-                                exc_info=sys.exc_info())
+                            log.warning('Error with package %s when exporting field %s: %s', package.get('id'), key, err)
                             continue
 
             # CKAN doesn't like empty values on harvest, let's get rid of them

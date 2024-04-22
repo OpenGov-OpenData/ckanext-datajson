@@ -188,3 +188,39 @@ class TestExport(inherit):
     #     assert self.dataset3['title'] in datasets
     #     assert self.dataset4['title'] in datasets
     #     assert self.dataset5['title'] in datasets
+
+    def test_data_json_with_null(self):
+        # create datasets
+        user = factories.Sysadmin()
+        user_name = user['name'].encode('ascii')
+        organization = factories.Organization(
+            name='test-org',
+            users=[{'name': user_name, 'capacity': 'Admin'}]
+        )
+        test_dataset = factories.Dataset(
+            title='Test Dataset',
+            owner_org=organization['id']
+        )
+        factories.Resource(
+            name='Test Resource',
+            url=None,
+            package_id=test_dataset['id'],
+        )
+
+        if six.PY2:
+            self.app = self._get_test_app()
+        else:
+            config["ckan.legacy_templates"] = False
+            config["testing"] = True
+            app = ckan.config.middleware.make_app(config)
+            self.app = CKANZipTestApp(app)
+        url = '/organization/{}/data.json'.format(organization['id'])
+        extra_environ = {'REMOTE_USER': user_name}
+        res = self.app.get(url, extra_environ=extra_environ)
+
+        if six.PY2:
+            data_json = json.loads(res.body)
+        else:
+            data_json = json.loads(res.data)
+
+        assert len(data_json.get('dataset', [])) == 0
