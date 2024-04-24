@@ -146,7 +146,11 @@ class Package2Pod(object):
                     method = getattr(Wrappers, wrapper)
                     if method:
                         Wrappers.current_field_map = field_map
-                        dataset[key] = method(dataset.get(key))
+                        try:
+                            dataset[key] = method(dataset.get(key))
+                        except TypeError as err:
+                            log.warning('Error with package %s when exporting field %s: %s', package.get('id'), key, err)
+                            continue
 
             # CKAN doesn't like empty values on harvest, let's get rid of them
             # Remove entries where value is None, "", or empty list []
