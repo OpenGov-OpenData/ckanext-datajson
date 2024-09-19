@@ -491,6 +491,17 @@ class Wrappers(object):
                 resource['datastoreMetadata'] = '{}/api/action/datastore_search?resource_id={}&limit=0'.format(
                     config.get('ckan.site_url'), r.get('id'))
 
+                data_dictionary_distro = {
+                    '@type': 'dcat:Distribution',
+                    'title': 'Data Dictionary'.format(resource.get('name')),
+                    'description': 'Data Dictionary of the {}'.format(resource.get('url')),
+                    'format': 'CSV',
+                    'accessURL': '{}/datastore/dictionary_download/{}'.format(
+                        config.get('ckan.site_url'), resource.get('id')),
+                    'isDataDictionary': True,
+                }
+                arr.append(data_dictionary_distro)
+
             striped_resource = OrderedDict(
                 [(x, y) for x, y in resource.items() if y is not None and y != '' and y != []])
 
