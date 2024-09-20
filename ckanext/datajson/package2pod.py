@@ -493,12 +493,12 @@ class Wrappers(object):
 
                 data_dictionary_distro = {
                     '@type': 'dcat:Distribution',
-                    'title': 'Data Dictionary'.format(resource.get('name')),
-                    'description': 'Data Dictionary of the {}'.format(resource.get('url')),
+                    'title': 'Data Dictionary {}'.format(r.get('name')),
+                    'description': 'Data Dictionary of the {}'.format(res_url),
                     'format': 'CSV',
                     'accessURL': '{}/datastore/dictionary_download/{}'.format(
-                        config.get('ckan.site_url'), resource.get('id')),
-                    'isDataDictionary': True,
+                        config.get('ckan.site_url'), r.get('id')),
+                    'isHarvestable': False,
                 }
                 arr.append(data_dictionary_distro)
 
