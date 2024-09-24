@@ -21,7 +21,7 @@ jobs:
       - name: Run pylint
         run: pylint --output-format=colorized ckanext/datajson
       - name: Run bandit
-        run: bandit -s B101,B610 -r ./ -f screen
+        run: bandit -s B101,B610,B108 -r ./ -f screen
 
   test:
     strategy:

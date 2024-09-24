@@ -1,9 +1,6 @@
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-import http.server
 import json
 import logging
+import http.server
 import socketserver
 from threading import Thread
 
@@ -44,6 +41,12 @@ class MockDataJSONHandler(http.server.SimpleHTTPRequestHandler):
         elif self.path == '/null-spatial':
             self.sample_datajson_file = 'null-spatial.data.json'
             self.test_name = 'null-spatial'
+        elif self.path == '/numerical-title':
+            self.sample_datajson_file = 'numerical-title.data.json'
+            self.test_name = 'numerical-title'
+        elif self.path == '/text':
+            self.test_name = 'test'
+            self.respond('abc123', status=200)
         elif self.path == '/404':
             self.test_name = 'e404'
             self.respond('Not found', status=404)
