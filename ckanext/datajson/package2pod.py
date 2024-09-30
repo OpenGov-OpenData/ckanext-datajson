@@ -490,7 +490,7 @@ class Wrappers(object):
             if r.get('datastore_active'):
                 resource['datastoreMetadata'] = '{}/api/action/datastore_search?resource_id={}&limit=0'.format(
                     config.get('ckan.site_url'), r.get('id'))
-                
+
             if r.get('is_data_dict_populated'):
                 data_dictionary_distro = {
                     '@type': 'dcat:Distribution',
