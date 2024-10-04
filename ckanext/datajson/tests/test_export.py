@@ -1,24 +1,32 @@
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
 import json
+import six
 import zipfile
 import pytest
 
 from ckan.tests import factories
 
 
-from flask import Response
-import ckan.config.middleware
-from ckan.common import config
-from ckan.tests.helpers import CKANTestApp, CKANTestClient
+if six.PY2:
+    from ckan.tests.helpers import FunctionalTestBase
+    inherit = FunctionalTestBase
+else:
+    inherit = object
+    import ckan.config.middleware
+    from ckan.common import config
+    from ckan.tests.helpers import CKANTestApp, CKANTestClient
+    from flask import Response
+
+    class CKANZipTestApp(CKANTestApp):
+        ''' Special Test App to allow Zip Files '''
+        def test_client(self, use_cookies=True):
+            return CKANTestClient(self.app, Response, use_cookies=use_cookies)
 
 
-class CKANZipTestApp(CKANTestApp):
-    ''' Special Test App to allow Zip Files '''
-    def test_client(self, use_cookies=True):
-        return CKANTestClient(self.app, Response, use_cookies=use_cookies)
-
-
-@pytest.mark.usefixtures('with_plugins', 'clean_db', 'clean_index')
-class TestExport:
+@pytest.mark.usefixtures('with_plugins', 'clean_db')
+class TestExport(inherit):
     def create_datasets(self):
         self.user = factories.Sysadmin()
 
@@ -71,18 +79,24 @@ class TestExport:
         # create datasets
         self.create_datasets()
 
-        config["ckan.legacy_templates"] = False
-        config["testing"] = True
-        app = ckan.config.middleware.make_app(config)
-        self.app = CKANZipTestApp(app)
+        if six.PY2:
+            self.app = self._get_test_app()
+        else:
+            config["ckan.legacy_templates"] = False
+            config["testing"] = True
+            app = ckan.config.middleware.make_app(config)
+            self.app = CKANZipTestApp(app)
         url = '/organization/{}/draft.json'.format(self.organization['id'])
         extra_environ = {'REMOTE_USER': self.user_name}
         res = self.app.get(url, extra_environ=extra_environ)
 
         # zip file
-        zip_path = '/tmp/test.zip'
+        zip_path = '/tmp/test.zip'  # nosec
         zf = open(zip_path, 'wb')
-        zf.write(res.data)
+        if six.PY2:
+            zf.write(res.body)
+        else:
+            zf.write(res.data)
         zf.close()
         zfile = zipfile.ZipFile(zip_path, 'r')
         for name in zfile.namelist():
@@ -133,3 +147,68 @@ class TestExport:
 
         assert self.dataset1['title'] in titles
         assert self.dataset3['title'] in titles
+
+    # def test_subagency_data_json(self):
+    #     ''' Test for https://github.com/GSA/datagov-deploy/issues/3365 '''
+    #
+    #     # create datasets
+    #     self.create_datasets()
+    #
+    #     if six.PY2:
+    #         self.app = self._get_test_app()
+    #     else:
+    #         config["ckan.legacy_templates"] = False
+    #         config["testing"] = True
+    #         app = ckan.config.middleware.make_app(config)
+    #         self.app = CKANZipTestApp(app)
+    #     url = '/organization/{}/data.json'.format(self.organization['id'])
+    #     extra_environ = {'REMOTE_USER': self.user_name}
+    #     res = self.app.get(url, extra_environ=extra_environ)
+    #
+    #     if six.PY2:
+    #         data_json = json.loads(res.body)
+    #     else:
+    #         data_json = json.loads(res.data)
+    #     datasets = [data_json['dataset'][i]['title'] for i in range(0, 5)]
+    #
+    #     assert self.dataset1['title'] in datasets
+    #     assert self.dataset2['title'] in datasets
+    #     assert self.dataset3['title'] in datasets
+    #     assert self.dataset4['title'] in datasets
+    #     assert self.dataset5['title'] in datasets
+
+    def test_data_json_with_null(self):
+        # create datasets
+        user = factories.Sysadmin()
+        user_name = user['name'].encode('ascii')
+        organization = factories.Organization(
+            name='test-org',
+            users=[{'name': user_name, 'capacity': 'Admin'}]
+        )
+        test_dataset = factories.Dataset(
+            title='Test Dataset',
+            owner_org=organization['id']
+        )
+        factories.Resource(
+            name='Test Resource',
+            url=None,
+            package_id=test_dataset['id'],
+        )
+
+        if six.PY2:
+            self.app = self._get_test_app()
+        else:
+            config["ckan.legacy_templates"] = False
+            config["testing"] = True
+            app = ckan.config.middleware.make_app(config)
+            self.app = CKANZipTestApp(app)
+        url = '/organization/{}/data.json'.format(organization['id'])
+        extra_environ = {'REMOTE_USER': user_name}
+        res = self.app.get(url, extra_environ=extra_environ)
+
+        if six.PY2:
+            data_json = json.loads(res.body)
+        else:
+            data_json = json.loads(res.data)
+
+        assert len(data_json.get('dataset', [])) == 0
