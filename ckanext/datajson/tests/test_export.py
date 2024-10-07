@@ -4,10 +4,9 @@ standard_library.install_aliases()
 import json
 import six
 import zipfile
+import pytest
 
-import ckanext.harvest.model as harvest_model
 from ckan.tests import factories
-from ckan.tests.helpers import reset_db
 
 
 if six.PY2:
@@ -26,22 +25,11 @@ else:
             return CKANTestClient(self.app, Response, use_cookies=use_cookies)
 
 
+@pytest.mark.usefixtures('with_plugins', 'clean_db')
 class TestExport(inherit):
-
-    if six.PY2:
-        @classmethod
-        def setup_class(cls):
-            super(TestExport, cls).setup_class()
-
-    @classmethod
-    def setup(cls):
-        # Start data json sources server we can test harvesting against it
-        reset_db()
-        harvest_model.setup()
-
     def create_datasets(self):
-
         self.user = factories.Sysadmin()
+
         self.user_name = self.user['name'].encode('ascii')
         self.organization = factories.Organization(name='myorg',
                                                    users=[{'name': self.user_name, 'capacity': 'Admin'}],

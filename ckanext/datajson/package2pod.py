@@ -6,7 +6,7 @@ except ImportError:
     from sqlalchemy.util import OrderedDict
 
 import ckan.model as model
-from ckan.common import config
+from ckan.plugins.toolkit import asbool, config
 from ckan.lib import helpers as h
 
 import json
@@ -387,13 +387,13 @@ class Wrappers(object):
                 contact_point['fn'] = fn
             else:
                 contact_point['fn'] = config.get('ckanext.datajson.contact_name',
-                                                 config.get('email_to'))
+                                                 config.get('ckan.site_title'))
 
             if email:
                 contact_point['hasEmail'] = email
             else:
                 contact_point['hasEmail'] = config.get('ckanext.datajson.contact_email',
-                                                       config.get('ckan.site_title'))
+                                                       config.get('email_to'))
 
             return contact_point
         except Exception as e:
@@ -488,13 +488,28 @@ class Wrappers(object):
                 log.warning("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
             if r.get('datastore_active'):
-                resource['datastoreMetadata'] = '{}/api/action/datastore_search?resource_id={}&limit=0'.format(
+                resource['describedBy'] = '{}/api/action/datastore_search?resource_id={}&limit=0'.format(
                     config.get('ckan.site_url'), r.get('id'))
+                resource['describedByType'] = 'application/json'
 
             striped_resource = OrderedDict(
                 [(x, y) for x, y in resource.items() if y is not None and y != '' and y != []])
 
             arr += [OrderedDict(striped_resource)]
+
+            publish_data_dictionary = asbool(config.get('ckanext.datajson.publish_data_dictionary', False))
+            if publish_data_dictionary and r.get('is_data_dict_populated'):
+                data_dictionary_distrib = {
+                    '@type': 'dcat:Distribution',
+                    'mediaType': 'text/csv',
+                    'format': 'CSV',
+                    'title': 'Data Dictionary - {}'.format(r.get('name')),
+                    'description': 'Data Dictionary for {}'.format(res_url),
+                    'downloadURL': '{}/datastore/dictionary_download/{}'.format(
+                        config.get('ckan.site_url'), r.get('id')),
+                    'isDataDictionary': True,
+                }
+                arr.append(data_dictionary_distrib)
 
         return arr
 

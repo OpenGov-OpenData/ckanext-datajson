@@ -24,14 +24,13 @@ from .factories import HarvestJobObj, HarvestSourceObj
 
 try:
     from ckan.tests.factories import Organization, Sysadmin
-    from ckan.tests.helpers import reset_db
 except ImportError:
     from ckan.new_tests.factories import Organization, Sysadmin
-    from ckan.new_tests.helpers import reset_db
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures('with_plugins', 'clean_db')
 class TestDataJSONHarvester(object):
 
     @classmethod
@@ -40,16 +39,9 @@ class TestDataJSONHarvester(object):
         cls.mock_port = 8961
         mock_datajson_source.serve(cls.mock_port)
 
-    @classmethod
-    def setup(cls):
-        # Start data json sources server we can test harvesting against it
-        reset_db()
-        harvest_model.setup()
-        cls.user = Sysadmin()
-        cls.org = Organization()
-
     def run_gather(self, url, config_str='{}'):
-        self.source = HarvestSourceObj(url=url, owner_org=self.org['id'], config=config_str)
+        org = Organization()
+        self.source = HarvestSourceObj(url=url, owner_org=org['id'], config=config_str)
         self.job = HarvestJobObj(source=self.source)
 
         self.harvester = DataJsonHarvester()
@@ -267,10 +259,10 @@ class TestDataJSONHarvester(object):
                     'extras': []}
 
         mock_harvest_source_show.side_effect = ps
-
+        user = Sysadmin()
         datasets = self.get_datasets_from_2_collection()
 
-        context = {'model': model, 'user': self.user['name'], 'session': model.Session}
+        context = {'model': model, 'user': user['name'], 'session': model.Session}
 
         # fake job status before final RUN command.
         self.job.status = 'Running'

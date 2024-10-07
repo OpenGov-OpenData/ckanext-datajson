@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import logging
-
+import pytest
 from ckan import model
 
 import ckanext.harvest.model as harvest_model
@@ -18,7 +18,11 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures('with_plugins', 'clean_db', 'clean_index')
 class TestCollectionUI(helpers.FunctionalTestBase):
+
+    def setup(self):
+        pass
 
     @classmethod
     def setup_class(cls):
@@ -27,12 +31,6 @@ class TestCollectionUI(helpers.FunctionalTestBase):
         cls.extra_environ = {'REMOTE_USER': cls.user['name'].encode('ascii')}
         cls.mock_port = 8953
         mock_datajson_source.serve(cls.mock_port)
-
-    @classmethod
-    def setup(cls):
-        # Start data json sources server we can test harvesting against it
-        helpers.reset_db()
-        harvest_model.setup()
 
     def test_collection_ui(self):
         """ check if the user interface show collection as we expect """
