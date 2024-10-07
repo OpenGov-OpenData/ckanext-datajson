@@ -218,9 +218,6 @@ class DatasetHarvesterBase(HarvesterBase):
             if not matched_filters:
                 continue
 
-            if dataset.get("isDataDictionary", False):
-                log.info("SKIP: {} as data dictionary".format(dataset["identifier"]))
-
             # Some source contains duplicate identifiers. skip all except the first one
             if dataset["identifier"] in unique_datasets:
                 self._save_gather_error("Duplicate entry ignored for identifier: '%s'." % (dataset["identifier"]), harvest_job)
