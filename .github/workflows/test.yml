@@ -86,7 +86,19 @@ jobs:
     - name: Run tests
       run: |
         set -o pipefail
-        pytest --ckan-ini=test.ini --cov=ckanext.datajson --cov-fail-under=${CODE_COVERAGE_THRESHOLD_REQUIRED} --disable-warnings ckanext/datajson/tests | tee pytest-coverage.txt
+        pytest --ckan-ini=test.ini --cov=ckanext.datajson --cov-report xml:coverage.xml --cov-fail-under=${CODE_COVERAGE_THRESHOLD_REQUIRED} --disable-warnings ckanext/datajson/tests | tee pytest-coverage.txt
     - name: Report test coverage
       if: ${{ always() }}
       uses: coroo/pytest-coverage-commentator@v1.0.2
+    - name: SonarQube Scan
+      uses: sonarsource/sonarqube-scan-action@master
+      with:
+        args: >
+          -Dsonar.projectKey=ckanext-datajson
+          -Dsonar.sources=ckanext/datajson
+          -Dsonar.tests=ckanext/datajson/tests
+          -Dsonar.exclusions=ckanext/datajson/tests/**
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_API_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_EXTERNAL_URL }}
